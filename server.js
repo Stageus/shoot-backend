@@ -35,6 +35,7 @@ redisClient.connect().catch(console.error);
 sessionOption.store = new RedisStore({ client: redisClient });
 
 // middleware =======================================================
+app.use(express.json());
 app.use(session(sessionOption));
 
 // routes ===========================================================

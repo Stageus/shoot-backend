@@ -6,7 +6,6 @@ const addChannel = (channelData) => {
     return new Promise(async (resolve, reject) => {
         const { email, pw, pwCheck, birth, sex, channelName } = channelData;
         
-        console.log(channelData);
     })
 }
 

@@ -14,7 +14,7 @@ router.post('/', channelImgUpload, async (req, res) => {
     await addChannel(req.body);
 
     //send result
-    res.sendStatus(statusCode).send(result);
+    res.status(statusCode).send(result);
 })
 
 module.exports = router;
