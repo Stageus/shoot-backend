@@ -7,7 +7,7 @@ const sendEmail = require('../module/sendEmail');
 router.get('/number/:email', async (req, res) => {
     //from FE
     const email = req.params.email;
-    const inputNumber = req.body.number;
+    const inputNumber = req.query.number;
 
     //to FE
     const result = {};
@@ -26,8 +26,9 @@ router.get('/number/:email', async (req, res) => {
             result.message = 'incorrect auth number';
             statusCode = 400;
         }else{
-            await redis.set(`certified_email_${email}`, true);
-            redis.expire(`certified_email_${email}`, 60 * 30);
+            await redis.set(`certified_email_${email}`, 1);
+            await redis.expire(`certified_email_${email}`, 60 * 30);
+            await redis.del(`${email}_auth_number`);
         }
 
         await redis.disconnect();

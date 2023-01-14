@@ -1,6 +1,5 @@
 module.exports = (channelData) => {
     const { email, pw, pwCheck, birth, sex, channelName } = channelData;
-    console.log(channelData);
     
     //email valid check
     const emailExp = new RegExp('^[a-zA-Z0-9+-\_.]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$');

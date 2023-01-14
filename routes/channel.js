@@ -4,14 +4,21 @@ const router = require('express').Router();
 
 router.post('/', channelImgUpload, async (req, res) => {
     //from FE
-    const { email, pw, pwCheck, birth, sex, channelName } = req.body;
+    req.body.imgName = req?.file?.key;
 
     //to FE
     const result = {};
-    const statusCode = 200;
+    let statusCode = 200;
 
     //main
-    await addChannel(req.body);
+    try{
+        await addChannel(req.body);
+    }catch(err){
+        console.log(err);
+
+        result.message = err.message;
+        statusCode = err.statusCode;
+    }
 
     //send result
     res.status(statusCode).send(result);

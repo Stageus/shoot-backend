@@ -12,8 +12,10 @@ const channelImgUpload = multer({
         bucket : "jochong/channel_img",
         contentType : multerS3.AUTO_CONTENT_TYPE,
         key : (req, file, cb) => {
-            const imgName = 'asdfasfd';
-            cb(null, imgName);
+            const randomNumber = Math.floor(Math.random() * 1000000).toString().padStart(6, 0);
+            const date = new Date();
+            console.log(`profileImg-${date.getTime()}-${randomNumber}`);
+            cb(null, `profileImg-${date.getTime()}-${randomNumber}`);
         },
         acl : 'public-read',
         contentType : multerS3.AUTO_CONTENT_TYPE,
