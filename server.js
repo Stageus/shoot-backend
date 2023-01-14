@@ -1,6 +1,6 @@
 const express = require('express');
 const app = express();
-const path = require('dotenv');
+const path = require('path');
 const session = require('express-session');
 const RedisStore = require('connect-redis')(session);
 const { createClient } = require("redis");
