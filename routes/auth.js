@@ -3,6 +3,54 @@ const redis = require('redis').createClient();
 const { Client } = require('pg');
 const pgConfig = require('../config/psqlConfig');
 const sendEmail = require('../module/sendEmail');
+const passport = require('../module/passport');
+const jwtConfig = require('../config/jwtConfig');
+const jwt = require('jsonwebtoken');
+const logoutAuth = require('../middleware/logoutAuth');
+
+router.post('/local', logoutAuth, (req, res, next) => {
+    //from FE
+    const { email, pw } = req.body;
+
+    //to FE
+    const result = {};
+    let statusCode = 200;
+
+    //main
+    if(!email || !pw){
+        result.message = 'email and password must required';
+        statusCode = 400;
+
+        //send result
+        res.status(statusCode).send(result);
+    }else{
+        passport.authenticate('local', (err, email, info) => {
+            if(err){
+                statusCode = err.statusCode;
+                result.message = err.message;
+                result.blockEndTime = err.blockEndTime;
+            }else{
+                //set token
+                const token = jwt.sign(
+                    {
+                        email : email,
+                    },
+                    jwtConfig.jwtSecretKey,
+                    {
+                        expiresIn : '1h',
+                        issuer : 'shoot'
+                    }
+                );
+    
+                //cookie
+                res.cookie('token', token);
+            }
+    
+            //send result
+            res.status(statusCode).send(result);
+        })(req, res, next);
+    }    
+});
 
 router.get('/number/:email', async (req, res) => {
     //from FE
@@ -98,6 +146,6 @@ router.post('/number', async (req, res) => {
 
     //send result
     res.status(statusCode).send(result);
-})
+});
 
 module.exports = router;
