@@ -7,6 +7,15 @@ const passport = require('../module/passport');
 const jwtConfig = require('../config/jwtConfig');
 const jwt = require('jsonwebtoken');
 const logoutAuth = require('../middleware/logoutAuth');
+const loginAuth = require('../middleware/loginAuth');
+
+router.get('/', loginAuth, (req, res) => {
+    //from FE
+    const email = req.email;
+
+    //send result
+    res.status(200).send({ email : email });
+})
 
 router.post('/local', logoutAuth, (req, res, next) => {
     //from FE
@@ -30,6 +39,13 @@ router.post('/local', logoutAuth, (req, res, next) => {
                 result.message = err.message;
                 result.blockEndTime = err.blockEndTime;
             }else{
+                console.log(req.body);
+                //auto login check
+                let expiresIn = '1h';
+                if(req.body.autoLogin){
+                    expiresIn = '48h';
+                }
+
                 //set token
                 const token = jwt.sign(
                     {
@@ -37,7 +53,7 @@ router.post('/local', logoutAuth, (req, res, next) => {
                     },
                     jwtConfig.jwtSecretKey,
                     {
-                        expiresIn : '1h',
+                        expiresIn : expiresIn,
                         issuer : 'shoot'
                     }
                 );
@@ -147,5 +163,10 @@ router.post('/number', async (req, res) => {
     //send result
     res.status(statusCode).send(result);
 });
+
+router.delete('/', loginAuth, async (req, res) => {
+    res.clearCookie('token');
+    res.status(200).send({});
+})
 
 module.exports = router;
