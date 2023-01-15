@@ -1,8 +1,15 @@
 const passport = require('passport');
 const { Client } = require('pg');
 const LocalStrategy = require('passport-local').Strategy;
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const googleOauthConfig = require('../config/googleOauthConfig');
 const pgConfig = require('../config/psqlConfig');
 const passwordHash = require('../module/passwordHash');
+const blockCheck = require('./blockCheck');
+
+passport.serializeUser((email, done) => {
+    done(null, email);
+ });
 
 //local login
 passport.use(new LocalStrategy(
@@ -36,23 +43,18 @@ passport.use(new LocalStrategy(
             //SELECT block data
             const selectBlockSql = 'SELECT block_channel_idx, block_start_time, block_period FROM shoot.block_channel WHERE block_channel_email = $1 ORDER BY block_channel_idx DESC';
             const selectBlockData = [email];
-            const selectBlockResult = await pgClient.query(selectBlockSql, selectBlockData);
+            //const selectBlockResult = await pgClient.query(selectBlockSql, selectBlockData);
             
             //check block channel
-            if(selectBlockResult.rows.length !== 0){
-                const blockPeriod = selectBlockResult.rows[0].block_period;
-                const blockStartTime = selectBlockResult.rows[0].block_start_time;
-
-                const nowDate = new Date();
-                const endTime = new Date(blockStartTime);
-                endTime.setSeconds(endTime.getSeconds() + blockPeriod);
-
-                if(nowDate < endTime){
-                    done({ message : 'this channel had been blocked', statusCode : 403, blockEndTime : endTime });
-                    return;
-                }
-
-                delete selectPwResult.pw;
+            const block = await blockCheck(email);
+            if(!block.state){
+                done({ 
+                    message : 'this channel had been blocked', 
+                    statusCode : 403, 
+                    blockEndTime : block.blockEndTime, 
+                    blockReason : block.blockReason 
+                });
+            }else{
                 done(null, email, selectPwResult.rows[0]);
             }
         }catch(err){
@@ -60,9 +62,57 @@ passport.use(new LocalStrategy(
 
             done({ message : 'unexpected error occured', statusCode : 409 });
         }
-
-        //done(에러, email, info);
     }
 ));
+
+//google login
+passport.use(new GoogleStrategy(
+    {
+        clientID : googleOauthConfig.clientId,
+        clientSecret : googleOauthConfig.clientSecret,
+        callbackURL : 'http://xn--289a320aihm.com/auth/google/callback',
+        passReqToCallback : true,
+    },
+    async (req, accessToken, refreshToken, profile, done) => {
+        const email = profile.emails[0].value;
+
+        try{
+            //connect psql
+            const pgClient = new Client(pgConfig);
+            await pgClient.connect();
+
+            //SELECT email data
+            const selectSql = 'SELECT email, login_type FROM shoot.channel WHERE email = $1';
+            const selectChannelResult = await pgClient.query(selectSql, [email]);
+            if(selectChannelResult.rows.length !== 0){
+                if(selectChannelResult.rows[0].login_type !== 'google'){
+                    done({
+
+                    })
+                }else{
+                    //block check
+                    const block = await blockCheck(email);
+                    if(!block.state){
+                        done({ 
+                            message : 'this channel had been blocked', 
+                            statusCode : 403, 
+                            blockEndTime : block.blockEndTime, 
+                            blockReason : block.blockReason 
+                        });
+                    }else{
+                        done(null, email, null);
+                    }
+                }
+            }else{
+                //최초 로그인
+                done(null, email, { firstLogin : true });
+            }
+        }catch(err){
+            console.log(err);
+
+            done({ message : 'unexpected error occured ', statusCode : 409 })
+        }
+    }
+))
 
 module.exports = passport;

@@ -47,17 +47,17 @@ const addChannel = (channelData) => {
             
             //prepare sql
             let insertSql = '';
-            let insertData = [];
+            let insertArray = [];
             if(!imgName){
                 insertSql = 'INSERT INTO shoot.channel (email, pw, name, sex, birth) VALUES ($1, $2, $3, $4, $5)'
-                insertData = [email, passwordHash(pw), channelName, sex, birth];
+                insertArray = [email, passwordHash(pw), channelName, sex, birth];
             }else{
                 insertSql = 'INSERT INTO shoot.channel (email, pw, name, sex, birth, profile_img) VALUES ($1, $2, $3, $4, $5, $6)'
-                insertData = [email, passwordHash(pw), channelName, sex, birth, imgName];
+                insertArray = [email, passwordHash(pw), channelName, sex, birth, imgName];
             }
 
             //INSERT psql
-            await pgClient.query(insertSql, insertData);
+            await pgClient.query(insertSql, insertArray);
 
             //index elasticsearch
             const esClient = elastic.Client({
@@ -96,6 +96,55 @@ const addChannel = (channelData) => {
     })
 }
 
+const getChannel = (channelEamil) => {
+    return new Promise(async (resolve, reject) => {
+        const pgClient = new Client(pgConfig);
+        try{
+            await pgClient.connect();
+
+            const selectChannelSql = 'SELECT name, birth, sex, authority, creation_time, description, profile_img FROM shoot.channel WHERE email = $1';
+            const selectChannelResult = await pgClient.query(selectChannelSql, [channelEamil]);
+
+            if(selectChannelResult.rows.length === 0){
+                reject({
+                    message : 'cannot find channel',
+                    statusCode : 404
+                })
+            }else{
+                const channelData = selectChannelResult.rows[0];
+
+                resolve({
+                    email : channelEamil,
+                    name : channelData.name,
+                    birth : channelData.birth,
+                    sex : channelData.sex,
+                    authority : channelData.int,
+                    creation_time : channelData.creation_time,
+                    description : channelData.description,
+                    profile_img : channelData.profile_img
+                });
+            }
+        }catch(err){
+            console.log(err);
+
+            reject({
+                message : 'unexpected error occured',
+                statusCode : 409
+            })
+        }
+    })
+}
+
+const getAllChannel = (searchKeyword, lastChannelEmail = undefined) => {
+    return new Promise(async (resolve, reject) => {
+        //connect es
+        const esClient = new elastic.Client({
+            node : 'http://localhost:9200'
+        })
+    })
+}
+
 module.exports = {
     addChannel : addChannel,
+    getChannel : getChannel,
 }

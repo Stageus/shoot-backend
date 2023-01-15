@@ -4,10 +4,10 @@ const { Client } = require('pg');
 const pgConfig = require('../config/psqlConfig');
 const sendEmail = require('../module/sendEmail');
 const passport = require('../module/passport');
-const jwtConfig = require('../config/jwtConfig');
-const jwt = require('jsonwebtoken');
 const logoutAuth = require('../middleware/logoutAuth');
 const loginAuth = require('../middleware/loginAuth');
+const createToken = require('../module/createToken');
+const { getChannel } = require('../module/channelControl');
 
 router.get('/', loginAuth, (req, res) => {
     //from FE
@@ -15,7 +15,7 @@ router.get('/', loginAuth, (req, res) => {
 
     //send result
     res.status(200).send({ email : email });
-})
+});
 
 router.post('/local', logoutAuth, (req, res, next) => {
     //from FE
@@ -33,11 +33,12 @@ router.post('/local', logoutAuth, (req, res, next) => {
         //send result
         res.status(statusCode).send(result);
     }else{
-        passport.authenticate('local', (err, email, info) => {
+        passport.authenticate('local', (err, email, channelData) => {
             if(err){
                 statusCode = err.statusCode;
                 result.message = err.message;
                 result.blockEndTime = err.blockEndTime;
+                result.blockReason = err.blockReason;
             }else{
                 console.log(req.body);
                 //auto login check
@@ -47,16 +48,7 @@ router.post('/local', logoutAuth, (req, res, next) => {
                 }
 
                 //set token
-                const token = jwt.sign(
-                    {
-                        email : email,
-                    },
-                    jwtConfig.jwtSecretKey,
-                    {
-                        expiresIn : expiresIn,
-                        issuer : 'shoot'
-                    }
-                );
+                const token = createToken({ email : email }, expiresIn);
     
                 //cookie
                 res.cookie('token', token);
@@ -67,6 +59,82 @@ router.post('/local', logoutAuth, (req, res, next) => {
         })(req, res, next);
     }    
 });
+
+router.get('/google', passport.authenticate('google', { scope: ['profile', 'email']}));
+ 
+// 이거 고쳐야함
+router.get('/google/callback', (req, res) => {
+    passport.authenticate('google', async (err, email, info) => {
+        if(err){
+            console.log(err);
+
+            let cookieData = '';
+            if(err.statusCode === 409){
+                //예상치못한 에러
+                cookieData = JSON.stringify({
+                    statusCode : 409,
+                    message : 'unexpected error occured'
+                });
+            }else if(err.statusCode === 403){
+                //정지된 계정
+                cookieData = JSON.stringify({
+                    statusCode : 403
+                });
+            }
+            res.cookie('login_error', cookieData);
+            // ==============================================여기 로그인 페이지로 리디렉션 코드 넣어야함
+
+
+        }else if(info){
+            //최초 로그인
+            console.log('최초 로그인 입니다.');
+    
+            await redis.connect();
+    
+            await redis.set(`certified_email_${email}_google`);
+            await redis.expire(`certified_email_${email}_google`, 60 * 60 * 24);
+    
+            await redis.disconnect();
+            // ==============================================여기 소셜 로그인 회원가입 페이지로 리디렉션 코드 넣어야함
+            res.redirect();
+        }else{
+            //정상적 로그인
+            const token = createToken(email);
+            res.cookie('token', token);
+
+            res.redirect('/');
+        }
+        console.log(err, email, info);
+    })
+});
+
+router.delete('/', loginAuth, async (req, res) => {
+    res.clearCookie('token');
+    res.status(200).send({});
+});
+
+router.get('/channel', loginAuth, async (req, res) => {
+    //from FE
+    const email = req.email;
+
+    //to FE
+    const result = {};
+    let statusCode = 200;
+
+    //main
+    try{
+        console.log('/auth/channel');
+        const channelData = await getChannel(email);
+        
+        result.data = channelData;
+    }catch(err){
+        result.message = err.message;
+        statusCode = err.statusCode;
+    }
+
+    //send result
+    res.status(statusCode).send(result);
+})
 
 router.get('/number/:email', async (req, res) => {
     //from FE
@@ -105,7 +173,7 @@ router.get('/number/:email', async (req, res) => {
 
     //send reuslt
     res.status(statusCode).send(result);
-})
+});
 
 router.post('/number', async (req, res) => {
     //from FE
@@ -163,10 +231,5 @@ router.post('/number', async (req, res) => {
     //send result
     res.status(statusCode).send(result);
 });
-
-router.delete('/', loginAuth, async (req, res) => {
-    res.clearCookie('token');
-    res.status(200).send({});
-})
 
 module.exports = router;

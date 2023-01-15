@@ -1,18 +1,16 @@
-const jwtConfig = require('../config/jwtConfig');
-const jwt = require('jsonwebtoken');
+const verifyToken = require('../module/verifyToken');
 
 module.exports = (req, res, next) => {
     //from FE
     const token = req.cookies?.token;
 
     //main
-    try{
-        const userData = jwt.verify(token, jwtConfig.jwtSecretKey);
-        console.log(userData);
-        req.email = userData.email;
+    const verify = verifyToken(token);
 
+    if(verify.state){
+        req.email = verify.email;
         next();
-    }catch(err){
-        res.status(401).send({ message : err.message });
+    }else{
+        res.status(401).send({ message : verify.reason || 'no login' });
     }
 }
