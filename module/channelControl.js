@@ -125,26 +125,91 @@ const getChannel = (channelEamil) => {
                 });
             }
         }catch(err){
-            console.log(err);
-
             reject({
                 message : 'unexpected error occured',
-                statusCode : 409
+                statusCode : 409,
+                err : err
             })
         }
     })
 }
 
-const getAllChannel = (searchKeyword, lastChannelEmail = undefined) => {
+const getAllChannel = (searchKeyword, scrollId = undefined, size = 30) => {
     return new Promise(async (resolve, reject) => {
         //connect es
         const esClient = new elastic.Client({
             node : 'http://localhost:9200'
         })
+
+        try{
+            //check index
+            const exitsResult = await esClient.indices.exists({
+                index : 'channel',
+            });
+            if(!exitsResult || searchKeyword === "" && !scrollId){
+                reject({
+                    message : 'query error',
+                    statusCode : 400
+                })
+            }
+
+            let searchResult = {};
+            if(!scrollId){
+                //SEARCH
+                searchResult = await esClient.search({
+                    index : 'channel',
+                    body : {
+                        query : {
+                            bool : {
+                                must : [
+                                    {
+                                        wildcard : {
+                                            name : `*${searchKeyword}*`
+                                        }
+                                    }
+                                ]
+                            }
+                        }, 
+                        size : size
+                    },
+                    scroll : '10m'
+                })
+            }else{
+                searchResult = await esClient.scroll({
+                    scroll : '10m',
+                    scroll_id : scrollId
+                })
+            }
+            
+            resolve({
+                scrollId : searchResult._scroll_id,
+                data : searchResult.hits.hits.map((hit) => {
+                    return {
+                        email : hit._id,
+                        name : hit._source.name
+                    }
+                })
+            })
+        }catch(err){
+            const rejectObj = {
+                err : err
+            }
+
+            if(err.status === 400){
+                rejectObj.statusCode = 400;
+                rejectObj.message = 'wrong scroll id';
+            }else{
+                rejectObj.statusCode = 409;
+                rejectObj.message = 'unexpected error occured';
+            }
+
+            reject(rejectObj);
+        }
     })
 }
 
 module.exports = {
     addChannel : addChannel,
     getChannel : getChannel,
+    getAllChannel : getAllChannel,
 }

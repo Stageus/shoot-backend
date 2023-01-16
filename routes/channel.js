@@ -1,6 +1,6 @@
 const channelImgUpload = require('../middleware/channelImgUpload');
 const blockCheck = require('../module/blockCheck');
-const { addChannel, getChannel } = require('../module/channelControl');
+const { addChannel, getChannel, getAllChannel } = require('../module/channelControl');
 const { getSubscribeState } = require('../module/subscribeControl');
 const router = require('express').Router();
 const verifyToken = require('../module/verifyToken');
@@ -8,13 +8,28 @@ const verifyToken = require('../module/verifyToken');
 router.get('/all', async (req, res) => {
     //from FE
     const searchKeyword = req.query.search;
-    const lastChannelEmail = req.query.scroll;
+    const scrollId = req.query.scroll;
+    const size = req.query.size || 1;
 
     //to FE
     const result = {};
     let statusCode = 200;
 
     //main
+    try{
+        const getChannelAllResult = await getAllChannel(searchKeyword, scrollId, size);
+
+        result.data = getChannelAllResult.data;
+        result.scroll = getChannelAllResult.scrollId; 
+    }catch(err){
+        console.log(err);
+
+        result.message = err.message;
+        statusCode = err.statusCode;
+    }
+
+    //send result
+    res.status(statusCode).send(result);
 })
 
 router.get('/:email', async (req, res) => {
