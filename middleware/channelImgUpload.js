@@ -1,7 +1,6 @@
 const multer = require('multer');
 const multerS3 = require('multer-s3-transform');
 const channelDataValidCheck = require('../module/channelDataValidCheck');
-const s3 = require('s3');
 const AWS = require('aws-sdk');
 const awsConfig = require('../config/awsConfig');
 
@@ -9,18 +8,19 @@ AWS.config.update(awsConfig);
 
 const channelImgUpload = multer({
     storage: multerS3({
-        s3 : s3,
+        s3 : new AWS.S3(),
         bucket : "jochong/channel_img",
         contentType : multerS3.AUTO_CONTENT_TYPE,
-        key : () => {
-            const imgName = '';
-            cb(null, name);
+        key : (req, file, cb) => {
+            const randomNumber = Math.floor(Math.random() * 1000000).toString().padStart(6, 0);
+            const date = new Date();
+            console.log(`profileImg-${date.getTime()}-${randomNumber}`);
+            cb(null, `profileImg-${date.getTime()}-${randomNumber}`);
         },
         acl : 'public-read',
         contentType : multerS3.AUTO_CONTENT_TYPE,
     }),
     fileFilter : (req, file, cb)=>{
-        //channel data check
         const { state, message } = channelDataValidCheck(req.body);
         if(!(file.mimetype == "image/png" || file.mimetype == "image/jpg" || file.mimetype == "image/jpeg")){
             cb(new Error('invalid file type'));

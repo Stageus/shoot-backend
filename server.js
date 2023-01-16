@@ -4,6 +4,8 @@ const path = require('path');
 const session = require('express-session');
 const RedisStore = require('connect-redis')(session);
 const { createClient } = require("redis");
+const passport = require('passport');
+const cookieParser = require('cookie-parser');
 
 const authApi = require('./routes/auth');
 const bookmarkApi = require('./routes/bookmark');
@@ -35,7 +37,11 @@ redisClient.connect().catch(console.error);
 sessionOption.store = new RedisStore({ client: redisClient });
 
 // middleware =======================================================
+app.use(express.json());
+app.use(cookieParser());
 app.use(session(sessionOption));
+app.use(passport.initialize());
+app.use(passport.session());
 
 // routes ===========================================================
 app.use('/post', postApi);
