@@ -1,15 +1,16 @@
 const channelImgUpload = require('../middleware/channelImgUpload');
 const blockCheck = require('../module/blockCheck');
-const { addChannel, getChannel, getAllChannel } = require('../module/channelControl');
+const { addChannel, getChannel, getAllChannel, deleteChannel } = require('../module/channelControl');
 const { getSubscribeState } = require('../module/subscribeControl');
 const router = require('express').Router();
 const verifyToken = require('../module/verifyToken');
+const loginAuth = require('../middleware/loginAuth');
 
 router.get('/all', async (req, res) => {
     //from FE
     const searchKeyword = req.query.search;
     const scrollId = req.query.scroll;
-    const size = req.query.size || 1;
+    const size = req.query.size || 30;
 
     //to FE
     const result = {};
@@ -72,6 +73,7 @@ router.get('/:email', async (req, res) => {
 router.post('/', channelImgUpload, async (req, res) => {
     //from FE
     req.body.imgName = req?.file?.key;
+    const loginType = req.body.loginType;
 
     //to FE
     const result = {};
@@ -79,9 +81,36 @@ router.post('/', channelImgUpload, async (req, res) => {
 
     //main
     try{
-        await addChannel(req.body);
+        if(loginType){
+            await addChannel(req.body);
+        }else{
+            await addChannel(req.body, loginType);
+        }
     }catch(err){
         console.log(err);
+
+        result.message = err.message;
+        statusCode = err.statusCode;
+    }
+
+    //send result
+    res.status(statusCode).send(result);
+})
+
+router.delete('/:channelEmail', loginAuth, async (req, res) => {
+    //from FE
+    const deleteEmail = req.params.channelEmail;
+    const token = req.cookies.token;
+
+    //to FE
+    const result = {};
+    let statusCode = 200;
+    
+    //main
+    try{
+        await deleteChannel(deleteEmail, token);
+    }catch(err){
+        err.err !== undefined ? console.log(err.err) : null;
 
         result.message = err.message;
         statusCode = err.statusCode;

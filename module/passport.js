@@ -1,5 +1,6 @@
 const passport = require('passport');
 const { Client } = require('pg');
+const domainConfig = require('../config/domainConfig');
 const LocalStrategy = require('passport-local').Strategy;
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const googleOauthConfig = require('../config/googleOauthConfig');
@@ -39,11 +40,6 @@ passport.use(new LocalStrategy(
                 done({ message : 'wrong password', statusCode : 400 });
                 return;
             }
-
-            //SELECT block data
-            const selectBlockSql = 'SELECT block_channel_idx, block_start_time, block_period FROM shoot.block_channel WHERE block_channel_email = $1 ORDER BY block_channel_idx DESC';
-            const selectBlockData = [email];
-            //const selectBlockResult = await pgClient.query(selectBlockSql, selectBlockData);
             
             //check block channel
             const block = await blockCheck(email);
@@ -70,7 +66,7 @@ passport.use(new GoogleStrategy(
     {
         clientID : googleOauthConfig.clientId,
         clientSecret : googleOauthConfig.clientSecret,
-        callbackURL : 'http://xn--289a320aihm.com/auth/google/callback',
+        callbackURL : `http://${domainConfig.enDomain}/auth/google/callback`,
         passReqToCallback : true,
     },
     async (req, accessToken, refreshToken, profile, done) => {
@@ -87,7 +83,9 @@ passport.use(new GoogleStrategy(
             if(selectChannelResult.rows.length !== 0){
                 if(selectChannelResult.rows[0].login_type !== 'google'){
                     done({
-
+                        message : 'already exists email with other login',
+                        statusCode : 401,
+                        loginType : selectChannelResult.rows[0].login_type
                     })
                 }else{
                     //block check

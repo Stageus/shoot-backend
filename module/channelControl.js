@@ -1,11 +1,12 @@
 const elastic = require('elasticsearch');
-const { Client } = require('pg');
+const { Client, Pool } = require('pg');
 const redis = require('redis').createClient();
 const pgConfig = require('../config/psqlConfig');
 const channelDataValidCheck = require('./channelDataValidCheck');
 const passwordHash = require('./passwordHash');
+const verifyToken = require('../module/verifyToken');
 
-const addChannel = (channelData) => {
+const addChannel = (channelData, loginType = 'local') => {
     return new Promise(async (resolve, reject) => {
         const { email, pw, birth, sex, channelName, imgName } = channelData;
 
@@ -33,51 +34,96 @@ const addChannel = (channelData) => {
                 return;
             }
 
-            //check email auth
-            await redis.connect();
-            const authState = await redis.exists(`certified_email_${email}`);
-            if(!authState){
+            if(loginType !== 'local'){
+                //check email auth
+                await redis.connect();
+                const authState = await redis.exists(`certified_email_${email}_${loginType}`);
+                if(!authState){
+                    await redis.disconnect();
+                    reject({
+                        message : 'no email is being authenticated',
+                        statusCode : 403
+                    });
+                    return;
+                }
+
+                //delete email auth state on redis
+                await redis.del(`certified_email_${email}_${loginType}`);
                 await redis.disconnect();
-                reject({
-                    message : 'no email is being authenticated',
-                    statusCode : 403
+                
+                //prepare sql
+                let insertSql = '';
+                let insertArray = [];
+                if(!imgName){
+                    insertSql = 'INSERT INTO shoot.channel (email, pw, name, sex, birth, login_type) VALUES ($1, $2, $3, $4, $5)'
+                    insertArray = [email, passwordHash(pw), channelName, sex, birth];
+                }else{
+                    insertSql = 'INSERT INTO shoot.channel (email, pw, name, sex, birth, login_type, profile_img) VALUES ($1, $2, $3, $4, $5, $6)'
+                    insertArray = [email, passwordHash(pw), channelName, sex, birth, loginType,imgName];
+                }
+
+                //INSERT psql
+                await pgClient.query(insertSql, insertArray);
+
+                //index elasticsearch
+                const esClient = elastic.Client({
+                    node : "http://localhost:9200"
                 });
-                return;
+                await esClient.index({
+                    index : 'channel',
+                    id : email,
+                    body : {
+                        name : channelName,
+                        login_type : loginType
+                    }
+                });
+            }else{
+                //check email auth
+                await redis.connect();
+                const authState = await redis.exists(`certified_email_${email}`);
+                if(!authState){
+                    await redis.disconnect();
+                    reject({
+                        message : 'no email is being authenticated',
+                        statusCode : 403
+                    });
+                    return;
+                }
+
+                //delete email auth state on redis
+                await redis.del(`certified_email_${email}`);
+                await redis.disconnect();
+                
+                //prepare sql
+                let insertSql = '';
+                let insertArray = [];
+                if(!imgName){
+                    insertSql = 'INSERT INTO shoot.channel (email, pw, name, sex, birth) VALUES ($1, $2, $3, $4, $5)'
+                    insertArray = [email, passwordHash(pw), channelName, sex, birth];
+                }else{
+                    insertSql = 'INSERT INTO shoot.channel (email, pw, name, sex, birth, profile_img) VALUES ($1, $2, $3, $4, $5, $6)'
+                    insertArray = [email, passwordHash(pw), channelName, sex, birth, imgName];
+                }
+
+                //INSERT psql
+                await pgClient.query(insertSql, insertArray);
+
+                //index elasticsearch
+                const esClient = elastic.Client({
+                    node : "http://localhost:9200"
+                });
+                await esClient.index({
+                    index : 'channel',
+                    id : email,
+                    body : {
+                        name : channelName
+                    }
+                })
             }
             
-            //prepare sql
-            let insertSql = '';
-            let insertArray = [];
-            if(!imgName){
-                insertSql = 'INSERT INTO shoot.channel (email, pw, name, sex, birth) VALUES ($1, $2, $3, $4, $5)'
-                insertArray = [email, passwordHash(pw), channelName, sex, birth];
-            }else{
-                insertSql = 'INSERT INTO shoot.channel (email, pw, name, sex, birth, profile_img) VALUES ($1, $2, $3, $4, $5, $6)'
-                insertArray = [email, passwordHash(pw), channelName, sex, birth, imgName];
-            }
-
-            //INSERT psql
-            await pgClient.query(insertSql, insertArray);
-
-            //index elasticsearch
-            const esClient = elastic.Client({
-                node : "http://localhost:9200"
-            });
-            await esClient.index({
-                index : 'channel',
-                id : email,
-                body : {
-                    name : channelName
-                }
-            })
-
-            //delete email auth state on redis
-            await redis.del(`certified_email_${email}`);
-            await redis.disconnect();
-
             //COMMIT
             await pgClient.query('COMMIT');
-
+            
             resolve(1);
         }catch(err){
             console.log(err);
@@ -208,8 +254,100 @@ const getAllChannel = (searchKeyword, scrollId = undefined, size = 30) => {
     })
 }
 
+const deleteChannel = (deleteEmail, token) => {
+    return new Promise(async (resolve, reject) => {
+        const verify = verifyToken(token);
+
+        if(verify.state){
+            const loginUserEmail = verify.email;
+            try{
+                const pgClient = new Client(pgConfig);
+                await pgClient.connect();
+
+                const esClient = elastic.Client({
+                    node : "http://localhost:9200"
+                });
+
+                //SELECT login user email and authority
+                const selectSql = 'SELECT email, authority FROM shoot.channel WHERE email = $1';
+                const selectResult = await pgClient.query(selectSql, [deleteEmail]);
+
+                console.log(deleteEmail);
+                //check email existence
+                if(selectResult.rows.length === 0){
+                    reject({
+                        message : 'cannot find channel',
+                        statusCode : 404
+                    });
+                    return;
+                }
+
+                //check authority
+                const loginUserAuthority = selectResult.rows[0].authority;
+                if(loginUserEmail === deleteEmail || loginUserAuthority === 1){
+                    //BEGIN
+                    await pgClient.query('BEGIN');
+
+                    //DELETE post
+                    const updatePostQuery = 'UPDATE shoot.post SET delete_time = $1 WHERE upload_channel_email = $2';
+                    await pgClient.query(updatePostQuery, [deleteEmail]);
+
+                    //delete post on elasticsearch
+                    await esClient.deleteByQuery({
+                        index : 'post',
+                        body : {
+                            query : {
+                                match : {
+                                    upload_channel_email : deleteEmail
+                                }
+                            }
+                        }
+                    });
+
+                    //DELETE comment
+                    const deleteCommentQuery = 'DELETE FROM shoot.comment WHERE wirte_channel_email = $1';
+                    const deleteCommentResult = await pgClient.query(deleteCommentQuery, [deleteEmail]);
+                    console.log(deleteCommentResult.rows);
+
+                    //DELETE channel
+                    const deleteChannelQuery = 'DELETE FROM shoot.channel WHERE email = $1';
+                    await pgClient.query(deleteChannelQuery, [deleteEmail]);
+                    
+                    //delete channel on elasticsearch
+                    await esClient.delete({
+                        index : 'channel',
+                        id : deleteEmail
+                    });
+
+                    //COMMIT
+                    await pgClient.query('COMMIT');
+
+                    resolve(1);
+                }else{
+                    reject({
+                        message : 'no auth',
+                        statusCode : 403
+                    })
+                }
+            }catch(err){
+                reject({
+                    message : 'unexpected error occured',
+                    statusCode : 409,
+                    err : err
+                })
+            }
+        }else{
+            reject({
+                message : 'no login',
+                statusCode : 401
+            });
+        }
+    })
+}
+
 module.exports = {
     addChannel : addChannel,
     getChannel : getChannel,
     getAllChannel : getAllChannel,
+    deleteChannel : deleteChannel
 }

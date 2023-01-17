@@ -62,49 +62,42 @@ router.post('/local', logoutAuth, (req, res, next) => {
 
 router.get('/google', passport.authenticate('google', { scope: ['profile', 'email']}));
  
-// 이거 고쳐야함
 router.get('/google/callback', (req, res) => {
     passport.authenticate('google', async (err, email, info) => {
         if(err){
             console.log(err);
 
-            let cookieData = '';
             if(err.statusCode === 409){
-                //예상치못한 에러
-                cookieData = JSON.stringify({
-                    statusCode : 409,
-                    message : 'unexpected error occured'
-                });
+                //unexpected error
+                res.cookie('statusCode', 409);
+                res.redirect('/login');
             }else if(err.statusCode === 403){
-                //정지된 계정
-                cookieData = JSON.stringify({
-                    statusCode : 403
-                });
+                //blocked email
+                res.cookie('statusCode', 403);
+                res.cookie('blockEndTime', err.blockEndTime);
+                res.cookie('blockReason', err.blockReason);
             }
-            res.cookie('login_error', cookieData);
             // ==============================================여기 로그인 페이지로 리디렉션 코드 넣어야함
-
-
         }else if(info){
-            //최초 로그인
-            console.log('최초 로그인 입니다.');
-    
+            //first login
             await redis.connect();
     
             await redis.set(`certified_email_${email}_google`);
             await redis.expire(`certified_email_${email}_google`, 60 * 60 * 24);
     
             await redis.disconnect();
-            // ==============================================여기 소셜 로그인 회원가입 페이지로 리디렉션 코드 넣어야함
-            res.redirect();
+
+            res.cookie('statusCode', 200);
+            res.cookie('loginType', 'google');
+            res.cookie('email', email);
+            res.redirect('/signup');
         }else{
-            //정상적 로그인
+            //login success
             const token = createToken(email);
             res.cookie('token', token);
 
             res.redirect('/');
         }
-        console.log(err, email, info);
     })
 });
 
