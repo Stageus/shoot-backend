@@ -3,7 +3,7 @@ module.exports = (postData) => {
         const title = postData.title || '';
         const description = postData.description || '';
         const categoryIdx = postData.categoryIdx || -1;
-        const postType = postData.postType || -1;
+        const postType = postData.postType || 1;
         const hashtag = postData.hashtag || [];
         const vote = postData.vote || [];
         const link = postData.link || [];
