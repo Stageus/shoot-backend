@@ -34,6 +34,7 @@ const getPostAll = (size = 20) => {
                                             post_thumbnail,
                                             post_upload_time,
                                             post_view_count,
+                                            post_good_count,
 
                                             shoot.category.category_idx,
                                             category_name,
@@ -73,7 +74,6 @@ const getPostAll = (size = 20) => {
 }
 
 const getPostBySearch = (searchType, search = '', sortby = 'date', orderby = 'desc', size = 20) => {
-    console.log(searchType, search, sortby, orderby);
     return new Promise(async (resolve, reject) => {
         //check sortby
         if(!(sortby === 'date' || sortby === 'good')){
@@ -143,6 +143,7 @@ const getPostBySearch = (searchType, search = '', sortby = 'date', orderby = 'de
                                                 post_thumbnail,
                                                 post_upload_time,
                                                 post_view_count,
+                                                post_good_count,
 
                                                 shoot.category.category_idx,
                                                 category_name,
@@ -197,6 +198,7 @@ const getPostBySearch = (searchType, search = '', sortby = 'date', orderby = 'de
                                                 post_thumbnail,
                                                 post_upload_time,
                                                 post_view_count,
+                                                post_good_count,
 
                                                 shoot.category.category_idx,
                                                 category_name,
@@ -265,6 +267,7 @@ const getPostByScrollId = (scrollId) => {
                                             post_thumbnail,
                                             post_upload_time,
                                             post_view_count,
+                                            post_good_count,
 
                                             shoot.category.category_idx,
                                             category_name,
@@ -379,6 +382,7 @@ const getPostByMatch = (matchType, match = '', sortby = 'date', orderby = 'desc'
                                                     post_thumbnail,
                                                     post_upload_time,
                                                     post_view_count,
+                                                    post_good_count,
 
                                                     shoot.category.category_idx,
                                                     category_name,
@@ -436,6 +440,7 @@ const getPostByMatch = (matchType, match = '', sortby = 'date', orderby = 'desc'
                                                 post_thumbnail,
                                                 post_upload_time,
                                                 post_view_count,
+                                                post_good_count,
 
                                                 shoot.category.category_idx,
                                                 category_name,
@@ -490,6 +495,7 @@ const getPostByMatch = (matchType, match = '', sortby = 'date', orderby = 'desc'
                                                 post_thumbnail,
                                                 post_upload_time,
                                                 post_view_count,
+                                                post_good_count,
 
                                                 shoot.category.category_idx,
                                                 category_name,

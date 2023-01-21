@@ -42,7 +42,6 @@ const addPostGood = (postIdx = -1, loginUserEmail = '') => {
             await pgClient.query('ROLLBACK');
 
             if(err.code == 23505){  //unique error
-                console.log('unique error');
                 reject({
                     statusCode : 403,
                     message : 'already good'
@@ -50,7 +49,7 @@ const addPostGood = (postIdx = -1, loginUserEmail = '') => {
                 return;
             }else if(err.code == 23503){ //no post-idx error
                 reject({
-                    statsuCode : 404,
+                    statusCode : 404,
                     message : 'cannot find post'
                 });
                 return;
@@ -82,27 +81,32 @@ const deletePostGood = (postIdx, loginUserEmail) => {
             const deletePostGoodSql = `DELETE FROM shoot.post_good WHERE post_idx = $1 AND email = $2`;
             const deletePostGoodResult = await pgClient.query(deletePostGoodSql, [postIdx, loginUserEmail]);
             
-            console.log(deletePostGoodResult);
+            if(deletePostGoodResult.rowCount === 0){
+                reject({
+                    statusCode : 403,
+                    message : 'do not have good record'
+                });
+            }else{
+                //UPDATE post good count
+                const updatePostGoodSql = 'UPDATE shoot.post SET post_good_count = post_good_count - 1 WHERE post_idx = $1 RETURNING post_good_count';
+                const updatePostGoodResult = await pgClient.query(updatePostGoodSql, [postIdx]);
 
-            //UPDATE post good count
-            const updatePostGoodSql = 'UPDATE shoot.post SET post_good_count = post_good_count - 1 WHERE post_idx = $1 RETURNING post_good_count';
-            const updatePostGoodResult = await pgClient.query(updatePostGoodSql, [postIdx]);
-
-            //update post good count on es
-            await esClient.update({
-                index : "post",
-                id : postIdx,
-                body : {
-                    doc : {
-                        post_good_count : updatePostGoodResult.rows[0].post_good_count,
+                //update post good count on es
+                await esClient.update({
+                    index : "post",
+                    id : postIdx,
+                    body : {
+                        doc : {
+                            post_good_count : updatePostGoodResult.rows[0].post_good_count,
+                        }
                     }
-                }
-            });
+                });
 
-            //COMMIT
-            await pgClient.query('COMMIT');
-            
-            resolve(1);
+                //COMMIT
+                await pgClient.query('COMMIT');
+                
+                resolve(1);
+            }
         }catch(err){
             await pgClient.query('ROLLBACK');
 
@@ -116,5 +120,6 @@ const deletePostGood = (postIdx, loginUserEmail) => {
 }
 
 module.exports = {
-    addPostGood : addPostGood
+    addPostGood : addPostGood,
+    deletePostGood : deletePostGood
 }
