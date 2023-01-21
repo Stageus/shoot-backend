@@ -1,4 +1,3 @@
-const elastic = require('elasticsearch');
 const { Client } = require('pg');
 const pgConfig = require('../config/psqlConfig');
 
