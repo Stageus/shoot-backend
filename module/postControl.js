@@ -3,7 +3,7 @@ const { Client } = require('pg');
 const pgConfig = require('../config/psqlConfig');
 
 const addPost = () => {
-    return Promise(async (resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
         try{    
             //connect es
             const esClient = new elastic.Client({
