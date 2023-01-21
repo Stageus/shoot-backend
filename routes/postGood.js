@@ -1,10 +1,10 @@
 const router = require('express').Router();
 const loginAuth = require('../middleware/loginAuth');
-const { addVote, deleteVote } = require('../module/voteControl');
+const { addPostGood, deletePostGood } = require('../module/postGoodControl');
 
-router.post('/:voteIdx', loginAuth, async (req, res) => {
+router.post('/:postIdx', loginAuth, async (req, res) => {
     //from FE
-    const voteIdx = req.params.voteIdx;
+    const postIdx = req.params.postIdx;
     const loginUserEmail = req.email;
 
     //to FE
@@ -13,21 +13,21 @@ router.post('/:voteIdx', loginAuth, async (req, res) => {
 
     //main
     try{
-        await addVote(voteIdx, loginUserEmail);
+        await addPostGood(postIdx, loginUserEmail);
     }catch(err){
         err.err ? console.log(err.err) : null;
 
-        result.message = err.message;
         statusCode = err.statusCode;
+        result.message = err.message;
     }
 
     //send result
     res.status(statusCode).send(result);
 });
 
-router.delete('/:voteIdx', loginAuth, async (req, res) => {
+router.delete('/:postIdx', loginAuth, async (req, res) => {
     //from FE
-    const voteIdx = req.params.voteIdx;
+    const postIdx = req.params.postIdx;
     const loginUserEmail = req.email;
 
     //to FE
@@ -36,16 +36,16 @@ router.delete('/:voteIdx', loginAuth, async (req, res) => {
 
     //main
     try{
-        await deleteVote(voteIdx, loginUserEmail);
+        await deletePostGood(postIdx, loginUserEmail);
     }catch(err){
         err.err ? console.log(err.err) : null;
 
-        result.message = err.message;
         statusCode = err.statusCode;
+        result.message = err.message;
     }
 
     //send result
     res.status(statusCode).send(result);
-});
+})
 
 module.exports = router;

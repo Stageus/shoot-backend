@@ -14,7 +14,6 @@ const channelImgUpload = multer({
         key : (req, file, cb) => {
             const randomNumber = Math.floor(Math.random() * 1000000).toString().padStart(6, 0);
             const date = new Date();
-            console.log(`profileImg-${date.getTime()}-${randomNumber}`);
             cb(null, `profileImg-${date.getTime()}-${randomNumber}`);
         },
         acl : 'public-read',

@@ -9,6 +9,7 @@ module.exports = (req, res, next) => {
 
     if(verify.state){
         req.email = verify.email;
+        req.authority = verify.authority;
         next();
     }else{
         res.status(401).send({ message : verify.reason || 'no login' });
