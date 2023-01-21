@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { addPost, deletePost, getPostByPostIdx, getPostByScrollId, modifyPost, getPostByMatch, getPostBySearch } = require('../module/postControl');
+const { addPost, deletePost, getPostByPostIdx, getPostByScrollId, modifyPost, getPostByMatch, getPostBySearch, getHotPostAll } = require('../module/postControl');
 const loginAuth = require('../middleware/loginAuth');
 const postFileUpload = require('../middleware/postFileUpload');
 const verifyToken = require('../module/verifyToken');
@@ -44,6 +44,27 @@ router.get('/all', async (req, res) => {
     res.status(statusCode).send(result);
 });
 
+router.get('/hot/all', async (req, res) => {
+    console.log('hot/all');
+    //to FE
+    const result = {};
+    let statusCode = 200;
+    
+    //main
+    try{
+        const postData = await getHotPostAll();
+        result.scroll = postData.scrollId;
+        result.data = postData.postArray;
+        
+    }catch(err){
+        result.message = err.message;
+        statusCode = err.statusCode;
+    }
+
+    //send result
+    res.status(statusCode).send(result);
+})
+
 router.get('/:postIdx', async (req, res) => {
     //from FE
     const postIdx = req.params.postIdx;
@@ -70,7 +91,7 @@ router.get('/:postIdx', async (req, res) => {
 
 router.post('/', loginAuth, postFileUpload, async (req, res) => {
     //from FE
-    req.body.video = req.files.video[0].key;
+    req.body.video = req.files?.video?.[0]?.key;
     req.body.thumbnail = req.files?.thumbnail?.[0]?.key;
     req.body.email = req.email;
 

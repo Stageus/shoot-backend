@@ -73,6 +73,69 @@ const getPostAll = (size = 20) => {
     })
 }
 
+const getPostByScrollId = (scrollId) => {
+    return new Promise(async (resolve, reject) => {
+        const pgClient = new Client(pgConfig);
+        const esClient = new elastic.Client({
+            node : 'http://localhost:9200'
+        });
+
+        try{
+            await pgClient.connect();
+
+            const searchResult = await esClient.scroll({
+                scroll : '3m',
+                scroll_id : scrollId
+            });
+
+            const postArray = [];
+            for(postData of searchResult.hits.hits){
+                //SELECT post
+                const selectPostSql = `SELECT 
+                                            post_idx,
+                                            post_title,
+                                            post_thumbnail,
+                                            post_upload_time,
+                                            post_view_count,
+                                            post_good_count,
+
+                                            shoot.category.category_idx,
+                                            category_name,
+
+                                            upload_channel_email,
+                                            name AS channel_name,
+                                            profile_img
+                                        FROM
+                                            shoot.post
+                                        LEFT JOIN
+                                            shoot.category
+                                        ON
+                                            shoot.post.category_idx = shoot.category.category_idx
+                                        JOIN
+                                            shoot.channel
+                                        ON 
+                                            upload_channel_email = email
+                                        WHERE
+                                            post_idx = $1
+                                    `
+                const selectPostResult = await pgClient.query(selectPostSql, [postData._id]);
+                postArray.push(selectPostResult.rows[0]);
+            }
+
+            resolve({
+                postArray : postArray,
+                scrollId : searchResult._scroll_id
+            });
+        }catch(err){
+            reject({
+                statusCode : 409,
+                message : 'unexpected error occured',
+                err : err
+            });
+        }
+    })
+}
+
 const getPostBySearch = (searchType, search = '', sortby = 'date', orderby = 'desc', size = 20) => {
     return new Promise(async (resolve, reject) => {
         //check sortby
@@ -243,21 +306,33 @@ const getPostBySearch = (searchType, search = '', sortby = 'date', orderby = 'de
     }) 
 }
 
-const getPostByScrollId = (scrollId) => {
+const getHotPostAll = (size = 20, hot = 10) => {
     return new Promise(async (resolve, reject) => {
+        const pgClient = new Client(pgConfig);
         const esClient = new elastic.Client({
             node : 'http://localhost:9200'
         });
-
-        const pgClient = new Client(pgConfig);
+        
         try{
             await pgClient.connect();
 
-            const searchResult = await esClient.scroll({
-                scroll : '3m',
-                scroll_id : scrollId
+            //search post on es
+            const searchResult = await esClient.search({
+                index : 'post',
+                body : {
+                    query : {
+                        range : {
+                            post_good_count : {
+                                gte : hot
+                            }
+                        }
+                    },
+                },
+                size : size,
+                scroll : '3m'
             });
 
+            //SELECT post
             const postArray = [];
             for(postData of searchResult.hits.hits){
                 //SELECT post
@@ -303,7 +378,7 @@ const getPostByScrollId = (scrollId) => {
                 err : err
             });
         }
-    })
+    });
 }
 
 const getPostByMatch = (matchType, match = '', sortby = 'date', orderby = 'desc', size = 20) => {
@@ -543,11 +618,19 @@ const getPostByMatch = (matchType, match = '', sortby = 'date', orderby = 'desc'
 
 const addPost = (postData) => {
     return new Promise(async (resolve, reject) => {
+        const pgClient = new Client(pgConfig);
         const esClient = new elastic.Client({
             node : 'http://localhost:9200'
         });
 
-        const pgClient = new Client(pgConfig);
+        //check video existence
+        if(!postData.video){
+            reject({
+                statusCode : 400,
+                message : 'video is required'
+            });
+            return;
+        }
 
         try{    
             await pgClient.connect();
@@ -1014,5 +1097,6 @@ module.exports = {
     getPostByMatch : getPostByMatch,
     getPostByScrollId : getPostByScrollId,
     getPostBySearch : getPostBySearch,
-    getPostAll : getPostAll
+    getPostAll : getPostAll,
+    getHotPostAll : getHotPostAll
 }

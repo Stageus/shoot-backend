@@ -68,7 +68,9 @@ module.exports = async (req, res, next) => {
             maxCount : 1,
         }
     ])(req, res, (err) => {
-        if(err){
+        if (err instanceof multer.MulterError) {
+            console.log(err);
+        }else if(err){
             console.log(err);
 
             //send result
