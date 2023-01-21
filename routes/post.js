@@ -1,17 +1,54 @@
 const router = require('express').Router();
-const { addPost, deletePost, getPostByPostIdx, modifyPost } = require('../module/postControl');
+const { addPost, deletePost, getPostByPostIdx, getPostByScrollId, modifyPost, getPostByMatch, getPostBySearch } = require('../module/postControl');
 const loginAuth = require('../middleware/loginAuth');
 const postFileUpload = require('../middleware/postFileUpload');
+const verifyToken = require('../module/verifyToken');
 
 router.get('/all', async (req, res) => {
+    //from FE
+    const matchType= req.query['match-type'];
+    const match = req.query['match'];
+    const searchType = req.query['search-type'];
+    const search = req.query['search'];
+    const sortby = req.query['sortby'];
+    const orderby = req.query['orderby'];
+    const scrollId = req.query['scroll'];
 
+    //to FE
+    const result = {};
+    let statusCode = 200;
+
+    //main
+    try{
+        let postData = {};
+        if(scrollId){
+            postData = await getPostByScrollId(scrollId);
+        }else if(matchType){
+            postData = await getPostByMatch(matchType, match, sortby, orderby);
+        }else if(searchType){
+            postData = await getPostBySearch(searchType, search, sortby, orderby);
+        }else{
+            postData = await getPostAll(20);
+        }
+        result.data = postData.postArray;
+        result.scroll = postData.scrollId;
+    }catch(err){
+        err.err ? console.log(err.err) : null;
+
+        result.message = err.message;
+        statusCode = err.statusCode;
+    }
+
+    //send result
+    console.log(result);
+    res.status(statusCode).send(result);
 });
 
 router.get('/:postIdx', async (req, res) => {
     //from FE
     const postIdx = req.params.postIdx;
     const token = req.cookies?.token || '';
-
+    
     //to FE
     const result = {};
     let statusCode = 200;

@@ -111,6 +111,6 @@ passport.use(new GoogleStrategy(
             done({ message : 'unexpected error occured ', statusCode : 409 })
         }
     }
-))
+));
 
 module.exports = passport;

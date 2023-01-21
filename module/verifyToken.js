@@ -7,7 +7,8 @@ module.exports = (token) => {
 
         return {
             state : true,
-            email : data.email
+            email : data.email,
+            authority : data.authority
         }
     }catch(err){
         return {

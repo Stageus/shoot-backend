@@ -70,7 +70,7 @@ router.get('/:email', async (req, res) => {
     res.status(statusCode).send(result);
 })
 
-router.post('/', channelImgUpload, async (req, res) => {
+router.post('/', loginAuth, channelImgUpload, async (req, res) => {
     //from FE
     req.body.imgName = req?.file?.key;
     const loginType = req.body.loginType;
@@ -108,7 +108,7 @@ router.delete('/:channelEmail', loginAuth, async (req, res) => {
     
     //main
     try{
-        await deleteChannel(deleteEmail, token);
+        //await deleteChannel(deleteEmail, token);
     }catch(err){
         err.err !== undefined ? console.log(err.err) : null;
 

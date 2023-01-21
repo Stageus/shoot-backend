@@ -218,11 +218,11 @@ const getAllChannel = (searchKeyword, scrollId = undefined, size = 30) => {
                         }, 
                         size : size
                     },
-                    scroll : '10m'
+                    scroll : '3m'
                 })
             }else{
                 searchResult = await esClient.scroll({
-                    scroll : '10m',
+                    scroll : '3m',
                     scroll_id : scrollId
                 })
             }

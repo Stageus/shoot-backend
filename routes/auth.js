@@ -40,7 +40,6 @@ router.post('/local', logoutAuth, (req, res, next) => {
                 result.blockEndTime = err.blockEndTime;
                 result.blockReason = err.blockReason;
             }else{
-                console.log(req.body);
                 //auto login check
                 let expiresIn = '1h';
                 if(req.body.autoLogin){
@@ -48,7 +47,7 @@ router.post('/local', logoutAuth, (req, res, next) => {
                 }
 
                 //set token
-                const token = createToken({ email : email }, expiresIn);
+                const token = createToken({ email : email, authority : channelData.authority }, expiresIn);
     
                 //cookie
                 res.cookie('token', token);
