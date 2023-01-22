@@ -28,6 +28,7 @@ router.get('/all', async (req, res) => {
         }else if(searchType){
             postData = await getPostBySearch(searchType, search, sortby, orderby);
         }else{
+            //아직 구현 안됨
             postData = await getPostAll(20);
         }
         result.data = postData.postArray;
@@ -40,7 +41,6 @@ router.get('/all', async (req, res) => {
     }
 
     //send result
-    console.log(result);
     res.status(statusCode).send(result);
 });
 

@@ -645,7 +645,7 @@ const addPost = (postData) => {
                 insertPostSql = 'INSERT INTO shoot.post (post_title, post_type, post_video, upload_channel_email, post_description, post_thumbnail, category_idx) VALUES ( $1, $2, $3, $4, $5, $6, $7) RETURNING post_idx, post_upload_time';
                 insertPostDataArray = [postData.title, postData.postType, postData.video, postData.email, postData.description, postData.thumbnail, postData.categoryIdx];
             }else{
-                insertPostSql = 'INSERT INTO shoot.post (post_title, post_type, post_video, upload_channel_email, post_description, category_idx) VALUES ( $1, $2, $3, $4, $5, $6) RETURNING post_idx, post_upload_time';
+                insertPostSql = 'INSERT INTO shoot.post (post_titleb, post_type, post_video, upload_channel_email, post_description, category_idx) VALUES ( $1, $2, $3, $4, $5, $6) RETURNING post_idx, post_upload_time';
                 insertPostDataArray = [postData.title, postData.postType, postData.video, postData.email, postData.description, postData.categoryIdx];
             }
             const insertPostResult = await pgClient.query(insertPostSql, insertPostDataArray);
@@ -1063,13 +1063,25 @@ const deletePost = (postIdx, token) => {
                         ignore : 404
                     });
 
+                    //DELETE comment data on elasticsearch
+                    await esClient.deleteByQuery({
+                        index : 'comment',
+                        body : {
+                            query : {
+                                match : {
+                                    post_idx : postIdx
+                                }
+                            }
+                        }
+                    });
+
                     //COMMIT
                     await pgClient.query('COMMIT');
                 }else{
                     reject({
                         statusCode : 403,
                         message : 'no auth'
-                    })
+                    });
                 }
 
                 resolve(1);
@@ -1081,7 +1093,7 @@ const deletePost = (postIdx, token) => {
                     statusCode : 409,
                     message : 'unexpected error occured',
                     err : err
-                })
+                });
             }
         }else{
             
