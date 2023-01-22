@@ -21,7 +21,7 @@ router.get('/all', async (req, res) => {
             result.data = getCommentResult.commentArray;
             result.scroll = getCommentResult.scrollId;
         }else{
-            const getCommentResult = await getAllComment(postIdx, sortby, 1, loginUserEmail);
+            const getCommentResult = await getAllComment(postIdx, sortby, 2, loginUserEmail);
             result.data = getCommentResult.commentArray;
             result.scroll = getCommentResult.scrollId;
         }

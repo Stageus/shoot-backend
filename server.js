@@ -26,6 +26,7 @@ const searchHistoryOffApi = require('./routes/searchHistoryOff');
 const logApi = require('./routes/log');
 const blockChannelApi = require('./routes/blockChannel');
 const postGoodApi = require('./routes/postGood');
+const commentGoodApi = require('./routes/commentGood');
 
 // config ===========================================================
 const { httpPort, httpsPort } = require('./config/portConfig');
@@ -64,6 +65,7 @@ app.use('/search-history-off', searchHistoryOffApi);
 app.use('/log', logApi);
 app.use('/block-channel', blockChannelApi);
 app.use('/post-good', postGoodApi);
+app.use('/comment-good', commentGoodApi);
 
 // api ==============================================================
 app.get('*', (req, res) => {
