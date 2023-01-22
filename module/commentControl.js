@@ -3,7 +3,7 @@ const { Client } = require('pg');
 const pgConfig = require('../config/psqlConfig');
 const commentDataValidCheck = require('./commentDataValidCheck');
 
-const addComment = (contents = '', postIdx = '', loginUserEmail ='') => {
+const addComment = (contents = '', postIdx = '', loginUserEmail = '') => {
     return new Promise(async (resolve, reject) => {
         const pgClient = new Client(pgConfig);
 
@@ -45,6 +45,55 @@ const addComment = (contents = '', postIdx = '', loginUserEmail ='') => {
                     err : err
                 });
             }
+        }
+    });
+}
+
+const modifyComment = (contents = '', commentIdx = -1, loginUserEmail = '', loginUserAuthority = 0) => {
+    return new Promise(async (resolve, reject) => {
+        const pgClient = new Client(pgConfig);
+
+        //check contents validation
+        if(!commentDataValidCheck(contents)){
+            reject({
+                statusCode : 400,
+                message : 'invalid comment contents'
+            });
+            return;
+        }
+
+        try{
+            await pgClient.connect();
+
+            //SELECT comment idx
+            const selectCommentSql = 'SELECT write_channel_email FROM shoot.comment WHERE comment_idx = $1';
+            const selectCommentResult = await pgClient.query(selectCommentSql, [commentIdx]);
+
+            if(selectCommentResult.rows[0]){
+                if(selectCommentResult.rows[0].write_channel_email === loginUserEmail || loginUserAuthority == 1){
+                    //UPDATE comment contents
+                    const updateCommentSql = 'UPDATE shoot.comment SET comment_contents = $1 WHERE comment_idx = $2';
+                    await pgClient.query(updateCommentSql, [contents, commentIdx])
+
+                    resolve(1);
+                }else{
+                    reject({
+                        statusCode : 403,
+                        message : 'no auth'
+                    });
+                }
+            }else{
+                reject({
+                    statusCode : 404,
+                    message : 'cannot find comment'
+                });
+            }
+        }catch(err){
+            reject({
+                statusCode : 409,
+                message : 'unexpected error occured',
+                err : err
+            });
         }
     });
 }
@@ -93,5 +142,6 @@ const deleteComment = (commentIdx, loginUserEmail, loginUserAuthority = 0) => {
 
 module.exports = {
     addComment : addComment,
-    deleteComment : deleteComment
+    deleteComment : deleteComment,
+    modifyComment : modifyComment
 }
