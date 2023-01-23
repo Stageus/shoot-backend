@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const loginAuth = require('../middleware/loginAuth');
-const { addReplyComment, deleteReplyCommnet } = require('../module/replyCommentControl');
+const { addReplyComment, deleteReplyCommnet, modifyReplyComment } = require('../module/replyCommentControl');
 
 router.post('/', loginAuth, async (req, res) => { 
     //from FE
@@ -26,6 +26,31 @@ router.post('/', loginAuth, async (req, res) => {
     res.status(statusCode).send(result);
 });
 
+router.put('/:replyCommentIdx', loginAuth, async (req, res) => {
+    //from FE
+    const modifyContents = req.body.contents || '';
+    const replyCommentIdx = req.params.replyCommentIdx || -1;
+    const loginUserEmail = req.email;
+    const loginUserAuthority = req.authority;
+
+    //to FE
+    const result = {};
+    let statusCode = 200;
+
+    //main
+    try{
+        await modifyReplyComment(modifyContents, replyCommentIdx, loginUserEmail,loginUserAuthority);
+    }catch(err){
+        err.err ? console.log(err.err) : null;
+
+        result.message = err.message;
+        statusCode = err.statusCode || 409;
+    }
+
+    //send result
+    res.status(statusCode).send(result);
+});
+
 router.delete('/:replyCommentIdx', loginAuth, async (req, res) => {
     //from FE
     const replyCommentIdx = req.params.replyCommentIdx;
@@ -41,8 +66,6 @@ router.delete('/:replyCommentIdx', loginAuth, async (req, res) => {
         await deleteReplyCommnet(replyCommentIdx, loginUserEmail, loginUserAuthority);
     }catch(err){
         err.err ? console.log(err.err) : null;
-
-        console.log(err)
 
         result.message = err.message;
         statusCode = err.statusCode || 409;

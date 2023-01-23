@@ -11,7 +11,8 @@ const addReplyComment = (contents, commentIdx, loginUserEmail) => {
             reject({
                 statusCode : 400,
                 message : 'invalid reply comment contents'
-            })
+            });
+            return;
         }
 
         try{
@@ -47,6 +48,60 @@ const addReplyComment = (contents, commentIdx, loginUserEmail) => {
                     err : err
                 });
             }
+        }
+    });
+}
+
+const modifyReplyComment = (contents, replyCommentIdx, loginUserEmail, loginUserAuthority = 0) => {
+    return new Promise(async (resolve, reject) => {
+        const pgClient = new Client(pgConfig);
+
+        if(!commentDataValidCheck(contents)){
+            reject({
+                statusCode : 400,
+                message : 'invalid reply comment contents'
+            });
+            return;
+        }
+
+        try{
+            await pgClient.connect();
+
+            await pgClient.query('BEGIN');
+            
+            //UPDATE reply comment
+            const updateReplyCommentSql = 'UPDATE shoot.reply_comment SET reply_comment_contents = $1 WHERE reply_comment_idx = $2 RETURNING write_channel_email';
+            const updateReplyCommentResult = await pgClient.query(updateReplyCommentSql, [contents, replyCommentIdx]);
+
+            if(updateReplyCommentResult.rows[0]){
+                if(updateReplyCommentResult.rows[0].write_channel_email === loginUserEmail || loginUserAuthority == 1){
+                    await pgClient.query('COMMIT');
+
+                    resolve(1);
+                }else{
+                    await pgClient.query('ROLLBACK');
+
+                    reject({
+                        statusCode : 403,
+                        message : 'no auth'
+                    });
+                }
+            }else{
+                await pgClient.query('ROLLBACK');
+
+                reject({
+                    statusCode : 404,
+                    message : 'cannot find reply comment'
+                });
+            }
+        }catch(err){
+            await pgClient.query('ROLLBACK');
+
+            reject({
+                statusCode : 409,
+                message : 'unexpected error occured',
+                err : err
+            });
         }
     });
 }
@@ -132,5 +187,6 @@ const deleteReplyCommnet = (replyCommentIdx, loginUserEmail, loginUserAuthority 
 
 module.exports = {
     addReplyComment : addReplyComment,
-    deleteReplyCommnet : deleteReplyCommnet
+    deleteReplyCommnet : deleteReplyCommnet,
+    modifyReplyComment : modifyReplyComment
 }
