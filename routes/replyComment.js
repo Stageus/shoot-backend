@@ -1,6 +1,30 @@
 const router = require('express').Router();
 const loginAuth = require('../middleware/loginAuth');
-const { addReplyComment, deleteReplyCommnet, modifyReplyComment } = require('../module/replyCommentControl');
+const { addReplyComment, deleteReplyCommnet, modifyReplyComment, getAllReplyComment } = require('../module/replyCommentControl');
+const verifyToken = require('../module/verifyToken');
+
+router.get('/all', async (req, res) => {
+    //from FE
+    const loginUserEmail = verifyToken(req.cookies.token).email || '';
+    const commentIdx = req.query['comment-idx'];
+    const scroll = req.query['scroll'];
+
+    //to FE
+    const result = {};
+    let statusCode = 200;
+
+    //main
+    try{
+        result.data = await getAllReplyComment(commentIdx, loginUserEmail, scroll, 20);
+    }catch(err){
+        err.err ? console.log(err.err) : null;
+
+        result.message = err.message;
+        statusCode = err.statusCode || 409;
+    }
+
+    res.status(statusCode).send(result);
+})
 
 router.post('/', loginAuth, async (req, res) => { 
     //from FE

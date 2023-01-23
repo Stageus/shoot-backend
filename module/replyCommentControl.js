@@ -3,6 +3,68 @@ const { Client } = require('pg');
 const pgConfig = require('../config/psqlConfig');
 const commentDataValidCheck = require('./commentDataValidCheck');
 
+const getAllReplyComment = (commentIdx,loginUserEmail = '', scroll = 2147483647, size = 20) => {
+    return new Promise(async (resolve, reject) => {
+        const pgClient =  new Client(pgConfig);
+
+        console.log(commentIdx, loginUserEmail, scroll, size);
+
+        try{
+            await pgClient.connect();
+
+            const selectCommentSql = `SELECT
+                                        shoot.reply_comment.reply_comment_idx,
+                                        reply_comment_contents,
+                                        reply_comment_time,
+                                        reply_comment_good_count,
+
+                                        write_channel_email,
+                                        profile_img,
+                                        name AS channel_name
+                                    ${
+                                        loginUserEmail ? 
+                                      `,CASE 
+                                            WHEN 
+                                            shoot.reply_comment_good.reply_comment_good_idx is not null
+                                            THEN 
+                                                true
+                                            ELSE 
+                                                false
+                                        END AS reply_comment_good_state` 
+                                        : 
+                                        ''
+                                    }
+                                    FROM
+                                        shoot.reply_comment
+                                    JOIN
+                                        shoot.channel
+                                    ON
+                                        write_channel_email = shoot.channel.email
+                                    LEFT JOIN
+                                        shoot.reply_comment_good
+                                    ON
+                                        shoot.reply_comment.reply_comment_idx = shoot.reply_comment_good.reply_comment_idx 
+                                    AND 
+                                        shoot.reply_comment_good.email = $2
+                                    WHERE
+                                        shoot.reply_comment.comment_idx = $1 AND shoot.reply_comment.reply_comment_idx < $3
+                                    ORDER BY
+                                        shoot.reply_comment.reply_comment_idx DESC
+                                    LIMIT ${size}
+                                    `;
+            const selectCommentResult = await pgClient.query(selectCommentSql, [commentIdx, loginUserEmail, scroll]);
+
+            resolve(selectCommentResult.rows);
+        }catch(err){
+            reject({
+                statusCode : 409,
+                message : 'unexpected error occured',
+                err : err
+            });
+        }
+    });
+}
+
 const addReplyComment = (contents, commentIdx, loginUserEmail) => {
     return new Promise(async (resolve, reject) => {
         const pgClient = new Client(pgConfig);
@@ -188,5 +250,6 @@ const deleteReplyCommnet = (replyCommentIdx, loginUserEmail, loginUserAuthority 
 module.exports = {
     addReplyComment : addReplyComment,
     deleteReplyCommnet : deleteReplyCommnet,
-    modifyReplyComment : modifyReplyComment
+    modifyReplyComment : modifyReplyComment,
+    getAllReplyComment : getAllReplyComment
 }
