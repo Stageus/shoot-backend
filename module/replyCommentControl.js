@@ -51,6 +51,86 @@ const addReplyComment = (contents, commentIdx, loginUserEmail) => {
     });
 }
 
+const deleteReplyCommnet = (replyCommentIdx, loginUserEmail, loginUserAuthority = 0) => {
+    return new Promise(async (resolve, reject) => {
+        const pgClient = new Client(pgConfig);
+
+        try{
+            await pgClient.connect();
+
+            //BEGIN
+            await pgClient.query('BEGIN');
+            
+            if(loginUserAuthority == 1){
+                //DELETE reply_comment
+                const deleteReplyCommentSql = 'DELETE FROM shoot.reply_comment WHERE reply_comment_idx = $1 RETURNING comment_idx';
+                const deleteReplyCommentResult = await pgClient.query(deleteReplyCommentSql, [replyCommentIdx]);
+
+                if(deleteReplyCommentResult.rows[0]){
+                    const commentIdx = deleteReplyCommentResult.rows[0].comment_idx;
+
+                    //UPDATE comment count
+                    const updateReplyCommenSql = 'UPDATE shoot.comment SET reply_comment_count = reply_comment_count - 1 WHERE comment_idx = $1';
+                    await pgClient.query(updateReplyCommenSql, [commentIdx]);
+
+                    //COMMIT
+                    await pgClient.query('COMMIT');
+
+                    resolve(1);
+                }else{
+                    await pgClient.query('ROLLBACK');
+
+                    reject({
+                        statusCode : 404,
+                        message : 'cannot find reply comment'
+                    });
+                }
+            }else{
+                //DELETE reply_comment
+                const deleteReplyCommentSql = 'DELETE FROM shoot.reply_comment WHERE reply_comment_idx = $1 RETURNING comment_idx, write_channel_email';
+                const deleteReplyCommentResult = await pgClient.query(deleteReplyCommentSql, [replyCommentIdx]);
+
+                if(deleteReplyCommentResult.rows[0]){
+                    if(deleteReplyCommentResult.rows[0].write_channel_email === loginUserEmail){
+                        const commentIdx = deleteReplyCommentResult.rows[0].comment_idx;
+
+                        //UPDATE
+                        const updateCommentSql = 'UPDATE shoot.comment SET reply_comment_count = reply_comment_count - 1 WHERE comment_idx = $1';
+                        await pgClient.query(updateCommentSql, [commentIdx]);
+
+                        //COMMIT
+                        await pgClient.query('COMMIT');
+                        resolve(1);
+                    }else{
+                        await pgClient.query('ROLLBACK');
+                        
+                        reject({
+                            statusCode : 403,
+                            message : 'no auth'
+                        });
+                    }
+                }else{
+                    await pgClient.query('ROLLBACK');
+
+                    reject({
+                        statusCode : 404,
+                        message : 'cannot find reply comment'
+                    });
+                }
+            }
+        }catch(err){
+            await pgClient.query('ROLLBACK');
+
+            reject({
+                statusCode : 409,
+                message : 'unexpected error occured',
+                err : err
+            });
+        }
+    });
+}
+
 module.exports = {
-    addReplyComment : addReplyComment   
+    addReplyComment : addReplyComment,
+    deleteReplyCommnet : deleteReplyCommnet
 }
