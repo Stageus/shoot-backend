@@ -84,7 +84,7 @@ const deletePostGood = (postIdx, loginUserEmail) => {
             if(deletePostGoodResult.rowCount === 0){
                 reject({
                     statusCode : 403,
-                    message : 'do not have good record'
+                    message : 'good data does not exist'
                 });
             }else{
                 //UPDATE post good count
