@@ -27,6 +27,7 @@ const logApi = require('./routes/log');
 const blockChannelApi = require('./routes/blockChannel');
 const postGoodApi = require('./routes/postGood');
 const commentGoodApi = require('./routes/commentGood');
+const replyCommentGoodApi = require('./routes/replyCommentGood');
 
 // config ===========================================================
 const { httpPort, httpsPort } = require('./config/portConfig');
@@ -66,6 +67,7 @@ app.use('/log', logApi);
 app.use('/block-channel', blockChannelApi);
 app.use('/post-good', postGoodApi);
 app.use('/comment-good', commentGoodApi);
+app.use('/reply-comment-good', replyCommentGoodApi);
 
 // api ==============================================================
 app.get('*', (req, res) => {
