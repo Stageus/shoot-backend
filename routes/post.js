@@ -3,6 +3,7 @@ const { addPost, deletePost, getPostByPostIdx, getPostByScrollId, modifyPost, ge
 const loginAuth = require('../middleware/loginAuth');
 const postFileUpload = require('../middleware/postFileUpload');
 const verifyToken = require('../module/verifyToken');
+const { addHistory } = require('../module/historyControl');
 
 router.get('/all', async (req, res) => {
     //from FE
@@ -78,6 +79,12 @@ router.get('/:postIdx', async (req, res) => {
     try{
         const postData = await getPostByPostIdx(postIdx, token);
         result.data = postData;
+
+        try{
+            await addHistory(postIdx, verifyToken(token).email);
+        }catch(err){
+            console.log(err);
+        }
     }catch(err){
         err.err ? console.log(err.err) : null
 
