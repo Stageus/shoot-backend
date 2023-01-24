@@ -35,6 +35,37 @@ const addBookmark = (postIdx, loginUserEmail) => {
     });
 }
 
+const deleteBookmark = (postIdx = -1, loginUserEmail = '') => {
+    if(postIdx === -1 || loginUserEmail === '') return;
+    return new Promise(async (resolve, reject) => {
+        const pgClient = new Client(pgConfig);
+
+        try{
+            await pgClient.connect();
+
+            //DELETE
+            const deleteBookmarkSql = 'DELETE FROM shoot.bookmark WHERE post_idx = $1 AND email = $2';
+            const deleteBookmarkResult = await pgClient.query(deleteBookmarkSql, [postIdx, loginUserEmail]);
+
+            if(deleteBookmarkResult.rowCount !== 0){
+                resolve(1);
+            }else{
+                reject({
+                    statusCode : 403,
+                    message : 'bookmark data does not exist'
+                })
+            }
+        }catch(err){
+            reject({
+                sttausCode : 409,
+                message : 'unexpected error occrued',
+                err : err
+            });
+        }
+    });
+}
+
 module.exports = {
-    addBookmark : addBookmark
+    addBookmark : addBookmark,
+    deleteBookmark : deleteBookmark
 }
