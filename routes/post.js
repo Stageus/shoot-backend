@@ -38,7 +38,7 @@ router.get('/all', async (req, res) => {
         err.err ? console.log(err.err) : null;
 
         result.message = err.message;
-        statusCode = err.statusCode;
+        statusCode = err.statusCode || 409;
     }
 
     //send result
@@ -59,7 +59,7 @@ router.get('/hot/all', async (req, res) => {
         
     }catch(err){
         result.message = err.message;
-        statusCode = err.statusCode;
+        statusCode = err.statusCode || 409;
     }
 
     //send result
@@ -89,7 +89,7 @@ router.get('/:postIdx', async (req, res) => {
         err.err ? console.log(err.err) : null
 
         result.message = err.message;
-        statusCode = statusCode;
+        statusCode = statusCode || 409;
     }
 
     //send result
@@ -113,7 +113,7 @@ router.post('/', loginAuth, postFileUpload, async (req, res) => {
         err.err !== undefined ? console.log(err.err) : null;
 
         result.message = err.message;
-        statusCode = err.statusCode;
+        statusCode = err.statusCode || 409;
     }
 
     //send result
@@ -137,7 +137,7 @@ router.put('/:postIdx', loginAuth, async (req, res) => {
         err.err ? console.log(err.err) : null;
 
         result.message = err.message;
-        statusCode = err.statusCode;
+        statusCode = err.statusCode || 409;
     }
 
     //send result
@@ -160,7 +160,7 @@ router.delete('/:postIdx', loginAuth, async (req, res) => {
         err.err ? console.log(err) : null;
 
         result.message = err.message;
-        statusCode = err.statusCode;
+        statusCode = err.statusCode || 409;
     }
 
     //send result
