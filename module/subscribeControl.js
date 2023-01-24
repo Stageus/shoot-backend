@@ -10,7 +10,7 @@ const addSubscribe = (loginUserEmail = '', subscribedChannelEmail = '') => {
             });
             return;
         }
-        
+
         const pgClient = new Client(pgConfig);
         try{
             await pgClient.connect();
@@ -41,6 +41,36 @@ const addSubscribe = (loginUserEmail = '', subscribedChannelEmail = '') => {
     })
 }
 
+const deleteSubscribe = (loginUserEmail, subscribedChannelEmail) => {
+    return new Promise(async (resolve, reject) => {
+        const pgClient = new Client(pgConfig);
+
+        try{
+            await pgClient.connect();
+
+            //DELETE subscribe
+            const deleteSubscribeSql = 'DELETE FROM shoot.subscribe WHERE subscriber_channel_email = $1 AND subscribed_channel_email = $2';
+            const deleteSubscribeResult = await pgClient.query(deleteSubscribeSql, [loginUserEmail, subscribedChannelEmail]);
+
+            if(deleteSubscribeResult.rowCount !== 0){
+                resolve();
+            }else{
+                reject({
+                    statusCode : 403,
+                    message : 'subscribe data does not exist'
+                });
+            }
+        }catch(err){
+            reject({
+                statusCode : 409,
+                message : 'unexpected error occured',
+                err : err
+            });
+        }
+    });
+}
+
 module.exports = {
-    addSubscribe : addSubscribe
+    addSubscribe : addSubscribe,
+    deleteSubscribe : deleteSubscribe
 }
