@@ -1,37 +1,46 @@
 const { Client } = require('pg');
 const pgConfig = require('../config/psqlConfig');
 
-const getSubscribeState = (subscriberEmail, subscribedEmail) => {
+const addSubscribe = (loginUserEmail = '', subscribedChannelEmail = '') => {
     return new Promise(async (resolve, reject) => {
+        if(loginUserEmail === subscribedChannelEmail){
+            reject({
+                statusCode : 400,
+                message : 'cannot subscribe myself'
+            });
+            return;
+        }
+        
         const pgClient = new Client(pgConfig);
         try{
             await pgClient.connect();
             
-            //SELECT
-            const selectSql = 'SELECT * FROM shoot.subscribe WHERE subscriber_channel_email = $1 AND subscribed_channel_email = $2';
-            const selectResult = await pgClient.query(selectSql, [subscriberEmail, subscribedEmail]);
+            //INSERT
+            const insertSubscribeSql = 'INSERT INTO shoot.subscribe (subscriber_channel_email, subscribed_channel_email) VALUES ($1, $2)';
+            await pgClient.query(insertSubscribeSql, [loginUserEmail, subscribedChannelEmail]);
 
-            if(selectResult.rows.length === 0){
-                resolve({
-                    state : false
-                })
-            }else{
-                resolve({
-                    state : true,
-                    subsribe_time : selectResult.rows[0].subscribe_time
-                })
-            }
+            resolve(1);
         }catch(err){
-            console.log(err);
-
-            reject({
-                message : 'unexpected error occured',
-                statusCode : 409
-            })
+            if(err.code == 23505){
+                reject({
+                    statusCode : 403,
+                    message : 'already subscribe'
+                });
+            }else if(err.code == 23503){
+                reject({
+                    statusCode : 404,
+                    message : 'cannot find channel' 
+                });
+            }else{
+                reject({
+                    message : 'unexpected error occured',
+                    statusCode : 409
+                });
+            }
         }
     })
 }
 
 module.exports = {
-    getSubscribeState : getSubscribeState,
+    addSubscribe : addSubscribe
 }

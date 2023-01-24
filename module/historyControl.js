@@ -37,8 +37,7 @@ const addHistory = (postIdx, loginUserEmail = '') => {
                 });
             }
         }catch(err){
-            console.log(err);
-            if(err.code == 23503){
+            if(err.code == 23503){ 
                 reject({
                     statusCode : 404,
                     message : 'cannot find post idx'
