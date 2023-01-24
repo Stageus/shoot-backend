@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { addPost, deletePost, getPostByPostIdx, getPostByScrollId, modifyPost, getPostByMatch, getPostBySearch, getHotPostAll } = require('../module/postControl');
+const { addPost, deletePost, getPostByPostIdx, getPostByScrollId, modifyPost, getPostByMatch, getPostBySearch, getHotPostAll, getHistoryPostAll } = require('../module/postControl');
 const loginAuth = require('../middleware/loginAuth');
 const postFileUpload = require('../middleware/postFileUpload');
 const verifyToken = require('../module/verifyToken');
@@ -46,7 +46,6 @@ router.get('/all', async (req, res) => {
 });
 
 router.get('/hot/all', async (req, res) => {
-    console.log('hot/all');
     //to FE
     const result = {};
     let statusCode = 200;
@@ -56,7 +55,27 @@ router.get('/hot/all', async (req, res) => {
         const postData = await getHotPostAll();
         result.scroll = postData.scrollId;
         result.data = postData.postArray;
-        
+    }catch(err){
+        result.message = err.message;
+        statusCode = err.statusCode || 409;
+    }
+
+    //send result
+    res.status(statusCode).send(result);
+});
+
+router.get('/history/all', loginAuth, async (req, res) => {
+    //from FE
+    const scroll = req.query['scroll'] || -1;
+    const loginUserEmail = req.email;
+
+    //to FE
+    const result = {};
+    let statusCode = 200;
+
+    //main
+    try{
+        result.data = await getHistoryPostAll(loginUserEmail, scroll, 20);
     }catch(err){
         result.message = err.message;
         statusCode = err.statusCode || 409;
