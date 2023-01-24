@@ -4,7 +4,7 @@ const { addBookmark } = require('../module/bookmarkControl');
 
 router.post('/', loginAuth, async (req, res) => {
     //from FE
-    const postIdx = req.query['postIdx'] || -1;
+    const postIdx = req.query['post-idx'] || -1;
     const loginUserEmail = req.email;
 
     //to FE
@@ -23,6 +23,10 @@ router.post('/', loginAuth, async (req, res) => {
 
     //send result
     res.status(statusCode).send(result);
+});
+
+router.delete('/', loginAuth, async (req, res) => {
+    //
 });
 
 module.exports = router;

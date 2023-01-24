@@ -9,12 +9,28 @@ const addBookmark = (postIdx, loginUserEmail) => {
             await pgClient.connect();
 
             //INSERT
-            const insertBookmarkSql = 'INSERT INTO shoot.bookmark (post_idx, email)';
+            const insertBookmarkSql = 'INSERT INTO shoot.bookmark (post_idx, email) VALUES ($1, $2)';
+            await pgClient.query(insertBookmarkSql, [postIdx, loginUserEmail]);
+
+            resolve(1);
         }catch(err){
-            reject({
-                statusCode : 409,
-                message : 'unexpected error occured'
-            });
+            if(err.code == 23505){ //unique error
+                reject({
+                    statusCode : 403,
+                    message : 'already bookmark' 
+                });
+            }else if(err.code == 23503){
+                reject({
+                    statusCode : 404,
+                    message : 'cannot find post'
+                })
+            }else{
+                reject({
+                    statusCode : 409,
+                    message : 'unexpected error occured',
+                    err : err
+                });
+            }
         }
     });
 }
