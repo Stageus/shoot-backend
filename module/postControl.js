@@ -381,6 +381,66 @@ const getHotPostAll = (size = 20, hot = 10) => {
     });
 }
 
+const getBookmarkPostAll = (loginUserEmail = '', scroll = -1, size = 20) => {
+    return new Promise(async (resolve, reject) => {
+        const pgClient = new Client(pgConfig);
+
+        try{
+            await pgClient.connect();
+
+            const getBookmarkSql = `SELECT
+                                        shoot.post.post_idx,
+                                        shoot.post.post_title,
+                                        shoot.post.post_thumbnail,
+                                        shoot.post.post_upload_time,
+                                        shoot.post.post_view_count,
+                                        shoot.post.post_good_count,
+
+                                        shoot.category.category_idx,
+                                        shoot.category.category_name,
+                                        
+                                        shoot.post.upload_channel_email,
+                                        shoot.channel.name AS upload_channel_name,
+                                        shoot.channel.profile_img,
+
+                                        shoot.bookmark.bookmark_time
+                                    FROM
+                                        shoot.bookmark
+                                    JOIN
+                                        shoot.channel
+                                    ON
+                                        shoot.bookmark.email = shoot.channel.email
+                                    JOIN
+                                        shoot.post
+                                    ON
+                                        shoot.bookmark.post_idx = shoot.post.post_idx
+                                    LEFT JOIN
+                                        shoot.category
+                                    ON
+                                        shoot.post.category_idx = shoot.category.category_idx
+                                    WHERE
+                                        shoot.bookmark.email = $1 ${scroll !== -1 ? `
+                                        AND
+                                            shoot.bookmark.bookmark_time < (SELECT bookmark_time FROM shoot.bookmark WHERE post_idx = $2)
+                                        ` : ''}
+                                    ORDER BY
+                                        shoot.bookmark.bookmark_time DESC 
+                                    LIMIT
+                                        ${size}
+                                    `;
+            const getBookmarkResult = await pgClient.query(getBookmarkSql, scroll === -1 ? [loginUserEmail] : [loginUserEmail, scroll]);
+
+            resolve(getBookmarkResult.rows);
+        }catch(err){
+            reject({
+                statusCode : 409,
+                message : 'unexpected error occured',
+                err : err
+            });
+        }
+    });
+}
+
 const getHistoryPostAll = (loginUserEmail = '', scroll = -1, size = 2) => {
     return new Promise(async (resolve, reject) => {
         const pgClient = new Client(pgConfig);
@@ -1171,5 +1231,6 @@ module.exports = {
     getPostBySearch : getPostBySearch,
     getPostAll : getPostAll,
     getHotPostAll : getHotPostAll,
-    getHistoryPostAll : getHistoryPostAll
+    getHistoryPostAll : getHistoryPostAll,
+    getBookmarkPostAll : getBookmarkPostAll
 }

@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { addPost, deletePost, getPostByPostIdx, getPostByScrollId, modifyPost, getPostByMatch, getPostBySearch, getHotPostAll, getHistoryPostAll } = require('../module/postControl');
+const { getBookmarkPostAll, addPost, deletePost, getPostByPostIdx, getPostByScrollId, modifyPost, getPostByMatch, getPostBySearch, getHotPostAll, getHistoryPostAll } = require('../module/postControl');
 const loginAuth = require('../middleware/loginAuth');
 const postFileUpload = require('../middleware/postFileUpload');
 const verifyToken = require('../module/verifyToken');
@@ -83,7 +83,30 @@ router.get('/history/all', loginAuth, async (req, res) => {
 
     //send result
     res.status(statusCode).send(result);
-})
+});
+
+router.get('/bookmark/all', loginAuth, async (req, res) => {
+    //from FE
+    const loginUserEmail = req.email || '';
+    const scroll = req.query.scroll || -1;
+
+    //to FE
+    const result = {};
+    let statusCode = 200;
+
+    //main
+    try{
+        result.data = await getBookmarkPostAll(loginUserEmail, scroll, 20);
+    }catch(err){
+        err.err ? console.log(err.err) : null;
+
+        result.message = err.message;
+        statusCode = err.statusCode || 409;
+    }
+
+    //send result
+    res.status(statusCode).send(result);
+});
 
 router.get('/:postIdx', async (req, res) => {
     //from FE
