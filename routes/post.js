@@ -85,6 +85,30 @@ router.get('/history/all', loginAuth, async (req, res) => {
     res.status(statusCode).send(result);
 });
 
+router.get('/subscribe/all', loginAuth, async (req, res) => {
+    //from FE
+    const loginUserEmail = req.email;
+    const groupby = req.query.groupby || 'post';
+    const scroll = req.query.scroll || -1;
+
+    //to FE
+    const result = {};
+    let statusCode = 200;
+
+    //main
+    try{
+        result.data = await getSubscribePostAll(loginUserEmail, groupby, scroll, 20);
+    }catch(err){
+        err.err ? console.log(err.err) : null;
+
+        result.message = err.message;
+        statusCode = err.statusCode || 409;
+    }
+
+    //send result
+    res.status(statusCode).send(result);
+});
+
 router.get('/bookmark/all', loginAuth, async (req, res) => {
     //from FE
     const loginUserEmail = req.email || '';

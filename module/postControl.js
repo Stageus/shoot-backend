@@ -388,6 +388,7 @@ const getBookmarkPostAll = (loginUserEmail = '', scroll = -1, size = 20) => {
         try{
             await pgClient.connect();
 
+            //SELECT post
             const getBookmarkSql = `SELECT
                                         shoot.post.post_idx,
                                         shoot.post.post_title,
@@ -431,6 +432,69 @@ const getBookmarkPostAll = (loginUserEmail = '', scroll = -1, size = 20) => {
             const getBookmarkResult = await pgClient.query(getBookmarkSql, scroll === -1 ? [loginUserEmail] : [loginUserEmail, scroll]);
 
             resolve(getBookmarkResult.rows);
+        }catch(err){
+            reject({
+                statusCode : 409,
+                message : 'unexpected error occured',
+                err : err
+            });
+        }
+    });
+}
+
+const getSubscribePostAll = (loginUserEmail = '', groupby = 'post', scroll = -1, size = 20) => {
+    return new Promise(async (resolve, reject) => {
+        const pgClient = new Client(pgConfig);
+
+        try{
+            await pgClient.connect();
+
+            if(groupby === 'post'){
+                //SELECT post
+                const selectSubscribeSql = `SELECT
+                                                shoot.post.post_idx,
+                                                shoot.post.post_title,
+                                                shoot.post.post_thumbnail,
+                                                shoot.post.post_upload_time,
+                                                shoot.post.post_view_count,
+                                                shoot.post.post_good_count,
+
+                                                shoot.category.category_idx,
+                                                shoot.category.category_name,
+                                                
+                                                shoot.post.upload_channel_email,
+                                                shoot.channel.name AS upload_channel_name,
+                                                shoot.channel.profile_img,
+
+                                                shoot.bookmark.bookmark_time
+                                            FROM
+                                                shoot.bookmark
+                                            JOIN
+                                                shoot.channel
+                                            ON
+                                                shoot.bookmark.email = shoot.channel.email
+                                            JOIN
+                                                shoot.post
+                                            ON
+                                                shoot.bookmark.post_idx = shoot.post.post_idx
+                                            LEFT JOIN
+                                                shoot.category
+                                            ON
+                                                shoot.post.category_idx = shoot.category.category_idx
+                                            WHERE
+                                                shoot.bookmark.email = $1 ${scroll !== -1 ? `
+                                                AND
+                                                    shoot.bookmark.bookmark_time < (SELECT bookmark_time FROM shoot.bookmark WHERE post_idx = $2)
+                                                ` : ''}
+                                            ORDER BY
+                                                shoot.bookmark.bookmark_time DESC 
+                                            LIMIT
+                                                ${size}
+                                            `;
+                const selectSubscribeResult = await pgClient.query(selectSubscribeSql, scroll === -1 ? [loginUserEmail] : [loginUserEmail, scroll]);
+
+                resolve(selectSubscribeResult.rows);
+            }
         }catch(err){
             reject({
                 statusCode : 409,
@@ -915,9 +979,9 @@ const getPostByPostIdx = (postIdx, token = "") => {
                     resolveData.good_state = selectGoodResult.rows.length !== 0;
 
                     //SELECT history
-                    const selectHistorySql = 'SELECT * FROM shoot.history WHERE channel_email = $1 AND post_idx = $2';
+                    const selectHistorySql = 'SELECT * FROM shoot.bookmark WHERE email = $1 AND post_idx = $2';
                     const selectHistoryResult = await pgClient.query(selectHistorySql, [loginUserEmail, postIdx]);
-                    resolveData.history_state = selectHistoryResult.rows.length !== 0;
+                    resolveData.bookmark_state = selectHistoryResult.rows.length !== 0;
 
                     //SELECT subscribe
                     const selectSubsribeSql = 'SELECT * FROM shoot.subscribe WHERE subscriber_channel_email = $1 AND subscribed_channel_email = $2'
@@ -1232,5 +1296,6 @@ module.exports = {
     getPostAll : getPostAll,
     getHotPostAll : getHotPostAll,
     getHistoryPostAll : getHistoryPostAll,
-    getBookmarkPostAll : getBookmarkPostAll
+    getBookmarkPostAll : getBookmarkPostAll,
+    getSubscribePostAll : getSubscribePostAll
 }
