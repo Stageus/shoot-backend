@@ -52,10 +52,31 @@ const addRequestCategory = (requestCategoryName = '', loginUserEmail = '') => {
 
 const deleteRequestCategory = (requestCategoryName = '', loginUserAuthority) => {
     return new Promise(async (resolve, reject) => {
+        if(loginUserAuthority !== 1){
+            reject({
+                statusCode : 403,
+                message : 'no admin auth'
+            });
+            return;
+        }
+
         const pgClient = new Client(pgConfig);
 
         try{
             await pgClient.connect();
+
+            //DELETE
+            const deleteReqCategorySql = 'DELETE FROM shoot.request_category WHERE request_category_name = $1';
+            const deleteReqCategoryResult = await pgClient.query(deleteReqCategorySql, [requestCategoryName]);
+
+            if(deleteReqCategoryResult.rowCount !== 0){ 
+                resolve(1);
+            }else{
+                reject({
+                    statusCode : 404,
+                    message : 'cannot find request category'
+                });
+            }
         }catch(err){
             reject({
                 statusCode : 409,
@@ -66,5 +87,6 @@ const deleteRequestCategory = (requestCategoryName = '', loginUserAuthority) => 
 }
 
 module.exports = {
-    addRequestCategory : addRequestCategory
+    addRequestCategory : addRequestCategory,
+    deleteRequestCategory : deleteRequestCategory
 }
