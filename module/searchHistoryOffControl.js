@@ -1,6 +1,32 @@
 const { Client } = require('pg');
 const pgConfig = require('../config/psqlConfig');
 
+const getSearchHistoryOffState = (loginUserEmail = '') => {
+    return new Promise(async (resolve, reject) => {
+        const pgClient = new Client(pgConfig);
+
+        try{
+            await pgClient.connect();
+
+            //SELECT
+            const selectHistoryOffSql = 'SELECT * FROM shoot.search_history_off WHERE channel_email = $1';
+            const selectHistoryOffResult = await pgClient.query(selectHistoryOffSql, [loginUserEmail]);
+
+            if(selectHistoryOffResult.rows.length === 0){
+                resolve({ state : true });
+            }else{
+                resolve({ state : false });
+            }
+        }catch(err){
+            reject({
+                statusCode : 409,
+                message : 'unexpected error occured',
+                err : err
+            });
+        }
+    });
+}
+
 const addSearchHistoryOff = (loginUserEmail = '') => {
     return new Promise(async (resolve, reject) => {
         const pgClient = new Client(pgConfig);
@@ -61,5 +87,6 @@ const deleteSearchHistoryOff = (loginUserEmail = '') => {
 
 module.exports = {
     addSearchHistoryOff : addSearchHistoryOff,
-    deleteSearchHistoryOff : deleteSearchHistoryOff
+    deleteSearchHistoryOff : deleteSearchHistoryOff,
+    getSearchHistoryOffState : getSearchHistoryOffState
 }
