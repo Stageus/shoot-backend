@@ -10,7 +10,7 @@ const getCategoryAll = (size = 5) => {
             await pgClient.connect();
 
             //SELECT category
-            const selectCategorySql = `SELECT category_idx, category_name, category_time FROM shoot.category ORDER BY category_idx ASC LIMIT ${size}}`;
+            const selectCategorySql = `SELECT category_idx, category_name, category_time FROM shoot.category ORDER BY category_idx ASC LIMIT ${size}`;
             const selectCategoryResult = await pgClient.query(selectCategorySql);
 
             resolve(selectCategoryResult.rows);
@@ -80,7 +80,51 @@ const addCategory = (categoryName, loginUserAuthority = 0) => {
     });
 }
 
+const deleteCategory = (categoryIdx = -1, loginUserAuthority = 0) => {
+    return new Promise(async (resolve, reject) => {
+        if(categoryIdx == -1){
+            reject({
+                statusCode : 404,
+                message : 'cannot find category'
+            });
+            return;
+        }
+
+        if(loginUserAuthority === 1){
+            const pgClient = new Client(pgConfig);
+            try{
+                await pgClient.connect();
+
+                //DELETE 
+                const deleteCategorySql = 'DELETE FROM shoot.category WHERE category_idx = $1';
+                const deleteCategoryResult = await pgClient.query(deleteCategorySql, [categoryIdx]);
+
+                if(deleteCategoryResult.rowCount !== 0){
+                    resolve(1);
+                }else{
+                    reject({
+                        statusCode : 404,
+                        message : 'cannot find category'
+                    }); 
+                }
+            }catch(err){
+                reject({
+                    statusCode : 409,
+                    message : 'unexpected error occured',
+                    err : err
+                });
+            }
+        }else{
+            reject({
+                statusCode : 403,
+                message : 'no admin auth'
+            });
+        }
+    });
+}
+
 module.exports = {
     getCategoryAll : getCategoryAll,
-    addCategory : addCategory
+    addCategory : addCategory,
+    deleteCategory : deleteCategory
 }

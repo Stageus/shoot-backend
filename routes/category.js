@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const loginAuth = require('../middleware/loginAuth');
-const { getCategoryAll, addCategory } = require('../module/categoryControl');
+const { getCategoryAll, addCategory, deleteCategory } = require('../module/categoryControl');
 
 router.get('/all', async (req, res) => {
     //to FE
@@ -38,6 +38,29 @@ router.post('/', loginAuth, async (req, res) => {
 
         result.message = err.message;
         statusCode = err.statusCode || 409;   
+    }
+
+    //send result
+    res.status(statusCode).send(result);
+});
+
+router.delete('/:categoryIdx', loginAuth, async (req, res) => {
+    //from FE
+    const categoryIdx = req.params.categoryIdx;
+    const loginUserAuthority = req.authority || 0;
+
+    //to FE
+    const result = {};
+    let statusCode = 200;
+
+    //main
+    try{
+        await deleteCategory(categoryIdx, loginUserAuthority);
+    }catch(err){
+        err.err ? console.log(err.err) : null;
+
+        result.message = err.message;
+        statusCode = err.statusCode || 409;
     }
 
     //send result
