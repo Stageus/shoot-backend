@@ -2,6 +2,28 @@ const { Client } = require('pg');
 const pgConfig = require('../config/psqlConfig');
 const categoryDataValidCheck = require('./categoryDataValidCheck');
 
+const getAllRequestCategory = (loginUserAuthority = 0) => {
+    return new Promise(async (resolve, reject) => {
+        const pgClient = new Client(pgConfig);
+
+        try{
+            await pgClient.connect();
+
+            //SELECT
+            const selectReqCategorySql = 'SELECT COUNT(*), request_category_name, MAX(recent_request_time) AS recent_request_time FROM shoot.request_category GROUP BY request_category_name';
+            const selectReqCategoryResult = await pgClient.query(selectReqCategorySql);
+
+            resolve(selectReqCategoryResult.rows);
+        }catch(err){
+            reject({
+                statusCode : 409,
+                message : 'unexpected error occured',
+                err : err
+            });
+        }
+    });
+}
+
 const addRequestCategory = (requestCategoryName = '', loginUserEmail = '') => {
     return new Promise(async (resolve, reject) => {
         const pgClient = new Client(pgConfig);
@@ -88,5 +110,6 @@ const deleteRequestCategory = (requestCategoryName = '', loginUserAuthority) => 
 
 module.exports = {
     addRequestCategory : addRequestCategory,
-    deleteRequestCategory : deleteRequestCategory
+    deleteRequestCategory : deleteRequestCategory,
+    getAllRequestCategory : getAllRequestCategory
 }
