@@ -59,7 +59,7 @@ const getAllSearchHistory = (loginUserEmail = '', size = 5) => {
             await pgClient.connect();
             
             //SELECT search history
-            const selectSearchHistorySql = 'SELECT search_keyword_idx, search_keyword AS keyword FROM shoot.search_keyword WHERE channel_email = $1';
+            const selectSearchHistorySql = 'SELECT search_keyword_idx, search_keyword AS keyword FROM shoot.search_history WHERE channel_email = $1 ORDER BY search_keyword_idx DESC';
             const selectSearchHistoryResult = await pgClient.query(selectSearchHistorySql, [loginUserEmail]);
 
             resolve(selectSearchHistoryResult.rows);
@@ -75,5 +75,6 @@ const getAllSearchHistory = (loginUserEmail = '', size = 5) => {
 
 module.exports = {
     addSearchHistory : addSearchHistory,
+    getAllSearchHistory : getAllSearchHistory,
     getAllSearchHistory : getAllSearchHistory
 }
