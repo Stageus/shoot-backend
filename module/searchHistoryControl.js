@@ -73,8 +73,55 @@ const getAllSearchHistory = (loginUserEmail = '', size = 5) => {
     });
 }
 
+const deleteSearchHistory = (searchHistoryIdx, loginUserEmail) => {
+    return new Promise(async (resolve, reject) => {
+        const pgClient = new Client(pgConfig);
+
+        try{
+            await pgClient.connect();
+
+            //BEGIN
+            await pgClient.query('BEGIN');
+
+            //DELETE search history
+            const deleteSearchHistorySql = 'DELETE FROM shoot.search_history WHERE search_keyword_idx = $1 RETURNING channel_email';
+            const deleteSearchHistoryResult = await pgClient.query(deleteSearchHistorySql, [searchHistoryIdx]);
+
+            if(deleteSearchHistoryResult.rows[0].channel_email){
+                if(deleteSearchHistoryResult.rows[0].channel_email === loginUserEmail){
+                    //COMMIT
+                    await pgClient.query('COMMIT');
+
+                    resolve(1);
+                }else{
+                    //ROLLBACK
+                    await pgClient.query('ROLLBACK');
+
+                    reject({
+                        statusCode : 403,
+                        message : 'no auth'
+                    });
+                }
+            }else{
+                reject({
+                    statusCode : 404,
+                    message : 'cannot find search history'
+                });
+            }
+        }catch(err){
+            //ROLLBACK
+            await pgClient.query('ROLLBACK');
+            reject({
+                statusCode : 409,
+                message : 'unexpected error occured',
+                err : err
+            })
+        }
+    });
+}
+
 module.exports = {
     addSearchHistory : addSearchHistory,
     getAllSearchHistory : getAllSearchHistory,
-    getAllSearchHistory : getAllSearchHistory
+    deleteSearchHistory : deleteSearchHistory
 }
