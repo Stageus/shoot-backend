@@ -30,8 +30,36 @@ const addSearchHistoryOff = (loginUserEmail = '') => {
     }); 
 }
 
+const deleteSearchHistoryOff = (loginUserEmail = '') => {
+    return new Promise(async (resolve, reject) => {
+        const pgClient = new Client(pgConfig);
 
+        try{
+            await pgClient.connect();
+
+            //DELETE history off
+            const deleteSearchHistoryOffSql = 'DELETE FROM shoot.search_history_off WHERE channel_email = $1';
+            const deleteSearchHistoryOffResult = await pgClient.query(deleteSearchHistoryOffSql, [loginUserEmail]);
+
+            if(deleteSearchHistoryOffResult.rowCount !== 0){
+                resolve(1);
+            }else{
+                reject({
+                    statusCode : 403,
+                    message : 'already on'
+                });
+            }
+        }catch(err){
+            reject({
+                statusCode : 409,
+                message : 'unexpected error occured',
+                err : err
+            });
+        }
+    });
+}
 
 module.exports = {
-    addSearchHistoryOff : addSearchHistoryOff
+    addSearchHistoryOff : addSearchHistoryOff,
+    deleteSearchHistoryOff : deleteSearchHistoryOff
 }
