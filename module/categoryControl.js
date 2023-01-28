@@ -1,5 +1,6 @@
 const { Client } = require('pg');
 const pgConfig = require('../config/psqlConfig');
+const categoryDataValidCheck = require('./categoryDataValidCheck');
 
 const getCategoryAll = (size = 5) => {
     return new Promise(async (resolve, reject) => {
@@ -24,9 +25,62 @@ const getCategoryAll = (size = 5) => {
 }
 
 const addCategory = (categoryName, loginUserAuthority = 0) => {
-    return new Pr
+    return new Promise(async (resolve, reject) => {
+        const pgClient = new Client(pgConfig);
+        
+        //check validation
+        if(loginUserAuthority !== 1){
+            reject({
+                statusCode : 403,
+                message : 'no admin auth'
+            });
+            return;
+        }
+
+        if(categoryDataValidCheck(categoryName)){
+            try{
+                await pgClient.connect();
+
+                //SELECT count
+                const selectCountSql = 'SELECT (SELECT COUNT(*) FROM shoot.category) < 5 AS count_state';
+                const selectCountResult = await pgClient.query(selectCountSql);
+            
+                if(selectCountResult.rows.count_state){
+                    //INSERT
+                    const insertCategorySql = 'INSERT INTO shoot.category (category_name) VALUES ($1)';
+                    await pgClient.query(insertCategorySql, [categoryName]);
+
+                    resolve(1);
+                }else{
+                    reject({
+                        statusCode : 404,
+                        message : 'cannot have more than 5 category'
+                    });
+                }
+            }catch(err){
+                if(err.code == 23505){
+                    reject({
+                        statusCode : 405,
+                        message : 'already have category' 
+                    });
+                }else{
+                    reject({
+                        statusCode : 409,
+                        message : 'unexpected error occured',
+                        err : err
+                    });
+                }
+            }
+        }else{
+            reject({
+                statusCode : 400,
+                message : 'invalid category'
+            })
+        }
+    });
 }
 
 module.exports = {
-    getCategoryAll : getCategoryAll
+    getCategoryAll : getCategoryAll,
+    addCategory : addCategory
 }

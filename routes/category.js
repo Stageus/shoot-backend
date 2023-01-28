@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const loginAuth = require('../middleware/loginAuth');
-const { getCategoryAll } = require('../module/categoryControl');
+const { getCategoryAll, addCategory } = require('../module/categoryControl');
 
 router.get('/all', async (req, res) => {
     //to FE
@@ -23,8 +23,8 @@ router.get('/all', async (req, res) => {
 
 router.post('/', loginAuth, async (req, res) => {
     //from FE
-    const loginUserEmail = req.email;
     const loginUserAuthority = req.authority;
+    const categoryName = req.body.category || '';
 
     //to FE
     const result =  {};
@@ -32,9 +32,12 @@ router.post('/', loginAuth, async (req, res) => {
 
     //main
     try{
-
+        await addCategory(categoryName, loginUserAuthority);
     }catch(err){
+        err.err ? console.log(err.err) : null;
 
+        result.message = err.message;
+        statusCode = err.statusCode || 409;   
     }
 
     //send result
