@@ -146,6 +146,261 @@ const getPostByScrollId = (scrollId = '') => {
     })
 }
 
+const getPostByMatch = (matchType, match = '', sortby = 'date', orderby = 'desc', size = 20) => {
+    return new Promise(async (resolve, reject) => {
+        //check sortby
+        if(!(sortby === 'date' || sortby === 'good')){
+            reject({
+                statusCode : 400,
+                message : 'invalid sortby'
+            });
+            return; 
+        }
+
+        //check orderby
+        if(!(orderby === 'desc' || orderby === 'asc')){
+            reject({
+                statusCode : 400,
+                message : 'invalid orderby'
+            });
+            return;
+        }
+
+        //check match length
+        if(match.length === 0){
+            reject({
+                statusCode : 400,
+                message : 'invalid match keyword'
+            });
+        }
+
+        const pgClient = new Client(pgConfig);
+        const esClient = new elastic.Client({
+            node : 'http://localhost:9200'
+        });
+        
+        try{
+            await pgClient.connect();
+
+            //prepare sort object for searching elastcisearch
+            const sortObj = {};
+            if(sortby === 'good'){
+                sortObj['post_good_count'] = orderby;
+            }else{
+                sortObj['post_upload_time'] = orderby;
+            }
+
+            if(matchType === 'category'){
+                //SELECT category idx
+                const selectCategorySql = 'SELECT category_idx FROM shoot.category WHERE category_name = $1';
+                const selectCategoryResult = await pgClient.query(selectCategorySql, [match]);
+                if(selectCategoryResult.rows[0]){
+                    const { category_idx } = selectCategoryResult.rows[0];
+
+                    //search post on es
+                    const searchResult = await esClient.search({
+                        index : 'post',
+                        body : {
+                            query : {
+                                bool : {
+                                    filter : [
+                                        {
+                                            match : {
+                                                'category_idx.keyword' : category_idx
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            sort : [sortObj]
+                        },
+                        size : size,
+                        scroll : '3m',
+                    });
+                    
+                    //SELECT post
+                    const postArray = [];
+                    for(postData of searchResult.hits.hits){
+                        //SELECT post
+                        const selectPostSql = `SELECT 
+                                                    post_idx,
+                                                    post_title,
+                                                    post_thumbnail,
+                                                    post_upload_time,
+                                                    post_view_count,
+                                                    post_good_count,
+
+                                                    shoot.category.category_idx,
+                                                    category_name,
+
+                                                    upload_channel_email,
+                                                    name AS channel_name,
+                                                    profile_img
+                                                FROM
+                                                    shoot.post
+                                                LEFT JOIN
+                                                    shoot.category
+                                                ON
+                                                    shoot.post.category_idx = shoot.category.category_idx
+                                                JOIN
+                                                    shoot.channel
+                                                ON 
+                                                    upload_channel_email = email
+                                                WHERE
+                                                    post_idx = $1
+                                            `
+                        const selectPostResult = await pgClient.query(selectPostSql, [postData._id]);
+                        postArray.push(selectPostResult.rows[0]);
+                    }
+
+                    resolve({
+                        postArray : postArray,
+                        scrollId : searchResult._scroll_id
+                    });
+                }else{
+                    resolve({
+                        postArray : [],
+                        scrollId : ''
+                    });
+                }
+            }else if(matchType === 'channel'){
+                //search post on es
+                const searchResult = await esClient.search({
+                    index : 'post',
+                    body : {
+                        query : {
+                            bool : {
+                                filter : [
+                                    {
+                                        match : {
+                                            'upload_channel_email.keyword' : match
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        sort : [sortObj]
+                    },
+                    size : size,
+                    scroll : '3m'
+                });
+
+                //SELECT post
+                const postArray = [];
+                for(postData of searchResult.hits.hits){
+                    //SELECT post
+                    const selectPostSql = `SELECT 
+                                                post_idx,
+                                                post_title,
+                                                post_thumbnail,
+                                                post_upload_time,
+                                                post_view_count,
+                                                post_good_count,
+
+                                                shoot.category.category_idx,
+                                                category_name,
+
+                                                upload_channel_email,
+                                                name AS channel_name,
+                                                profile_img
+                                            FROM
+                                                shoot.post
+                                            LEFT JOIN
+                                                shoot.category
+                                            ON
+                                                shoot.post.category_idx = shoot.category.category_idx
+                                            JOIN
+                                                shoot.channel
+                                            ON 
+                                                upload_channel_email = email
+                                            WHERE
+                                                post_idx = $1
+                                        `
+                    const selectPostResult = await pgClient.query(selectPostSql, [postData._id]);
+                    postArray.push(selectPostResult.rows[0]);
+                }
+
+                resolve({
+                    postArray : postArray,
+                    scrollId : searchResult._scroll_id
+                });
+            }else if(matchType === 'hashtag'){
+                //search post on es
+                const searchResult = await esClient.search({
+                    index : 'post',
+                    body : {
+                        query : {
+                            bool : {
+                                filter : [
+                                    {
+                                        match : {
+                                            hashtag : match
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        sort : [sortObj]
+                    },
+                    size : size,
+                    scroll : '3m'
+                });
+
+                //SELECT post
+                const postArray = [];
+                for(postData of searchResult.hits.hits){
+                    //SELECT post
+                    const selectPostSql = `SELECT 
+                                                post_idx,
+                                                post_title,
+                                                post_thumbnail,
+                                                post_upload_time,
+                                                post_view_count,
+                                                post_good_count,
+
+                                                shoot.category.category_idx,
+                                                category_name,
+
+                                                upload_channel_email,
+                                                name AS channel_name,
+                                                profile_img
+                                            FROM
+                                                shoot.post
+                                            LEFT JOIN
+                                                shoot.category
+                                            ON
+                                                shoot.post.category_idx = shoot.category.category_idx
+                                            JOIN
+                                                shoot.channel
+                                            ON 
+                                                upload_channel_email = email
+                                            WHERE
+                                                post_idx = $1
+                                        `
+                    const selectPostResult = await pgClient.query(selectPostSql, [postData._id]);
+                    postArray.push(selectPostResult.rows[0]);
+                }
+
+                resolve({
+                    postArray : postArray,
+                    scrollId : searchResult._scroll_id
+                });
+            }else{
+                reject({
+                    statusCode : 400,
+                    message : 'invalid match type'
+                });
+            }
+        }catch(err){
+            reject({
+                statusCode : 409,
+                message : 'unexpected error occured',
+                err : err
+            });
+        }
+    });
+}
+
 const getPostBySearch = (searchType, search = '', sortby = 'date', orderby = 'desc', size = 20) => {
     return new Promise(async (resolve, reject) => {
         //check sortby
@@ -565,241 +820,6 @@ const getHistoryPostAll = (loginUserEmail = '', scroll = -1, size = 2) => {
             const getHistoryResult = await pgClient.query(getHistorySql, scroll === -1 ? [loginUserEmail] : [loginUserEmail, scroll]);
 
             resolve(getHistoryResult.rows);
-        }catch(err){
-            reject({
-                statusCode : 409,
-                message : 'unexpected error occured',
-                err : err
-            });
-        }
-    });
-}
-
-const getPostByMatch = (matchType, match = '', sortby = 'date', orderby = 'desc', size = 20) => {
-    return new Promise(async (resolve, reject) => {
-        //check sortby
-        if(!(sortby === 'date' || sortby === 'good')){
-            reject({
-                statusCode : 400,
-                message : 'invalid sortby'
-            });
-            return; 
-        }
-
-        //check orderby
-        if(!(orderby === 'desc' || orderby === 'asc')){
-            reject({
-                statusCode : 400,
-                message : 'invalid orderby'
-            });
-            return;
-        }
-
-        //check match length
-        if(match.length === 0){
-            reject({
-                statusCode : 400,
-                message : 'invalid match keyword'
-            });
-        }
-
-        const pgClient = new Client(pgConfig);
-        const esClient = new elastic.Client({
-            node : 'http://localhost:9200'
-        });
-        
-        try{
-            await pgClient.connect();
-
-            //prepare sort object for searching elastcisearch
-            const sortObj = {};
-            if(sortby === 'good'){
-                sortObj['post_good_count'] = orderby;
-            }else{
-                sortObj['post_upload_time'] = orderby;
-            }
-
-            if(matchType === 'category'){
-                //SELECT category idx
-                const selectCategorySql = 'SELECT category_idx FROM shoot.category WHERE category_name = $1';
-                const selectCategoryResult = await pgClient.query(selectCategorySql, [match]);
-                if(selectCategoryResult.rows[0]){
-                    const { category_idx } = selectCategoryResult.rows[0];
-
-                    //search post on es
-                    const searchResult = await esClient.search({
-                        index : 'post',
-                        body : {
-                            query : {
-                                match : {
-                                    category_idx : category_idx
-                                }
-                            },
-                            sort : [sortObj]
-                        },
-                        size : size,
-                        scroll : '3m',
-                    });
-                    
-                    //SELECT post
-                    const postArray = [];
-                    for(postData of searchResult.hits.hits){
-                        //SELECT post
-                        const selectPostSql = `SELECT 
-                                                    post_idx,
-                                                    post_title,
-                                                    post_thumbnail,
-                                                    post_upload_time,
-                                                    post_view_count,
-                                                    post_good_count,
-
-                                                    shoot.category.category_idx,
-                                                    category_name,
-
-                                                    upload_channel_email,
-                                                    name AS channel_name,
-                                                    profile_img
-                                                FROM
-                                                    shoot.post
-                                                LEFT JOIN
-                                                    shoot.category
-                                                ON
-                                                    shoot.post.category_idx = shoot.category.category_idx
-                                                JOIN
-                                                    shoot.channel
-                                                ON 
-                                                    upload_channel_email = email
-                                                WHERE
-                                                    post_idx = $1
-                                            `
-                        const selectPostResult = await pgClient.query(selectPostSql, [postData._id]);
-                        postArray.push(selectPostResult.rows[0]);
-                    }
-
-                    resolve({
-                        postArray : postArray,
-                        scrollId : searchResult._scroll_id
-                    });
-                }else{
-                    resolve([]);
-                }
-            }else if(matchType === 'channel'){
-                //search post on es
-                const searchResult = await esClient.search({
-                    index : 'post',
-                    body : {
-                        query : {
-                            match : {
-                                upload_channel_email : match
-                            }
-                        },
-                        sort : [sortObj]
-                    },
-                    size : size,
-                    scroll : '3m'
-                });
-
-                //SELECT post
-                const postArray = [];
-                for(postData of searchResult.hits.hits){
-                    //SELECT post
-                    const selectPostSql = `SELECT 
-                                                post_idx,
-                                                post_title,
-                                                post_thumbnail,
-                                                post_upload_time,
-                                                post_view_count,
-                                                post_good_count,
-
-                                                shoot.category.category_idx,
-                                                category_name,
-
-                                                upload_channel_email,
-                                                name AS channel_name,
-                                                profile_img
-                                            FROM
-                                                shoot.post
-                                            LEFT JOIN
-                                                shoot.category
-                                            ON
-                                                shoot.post.category_idx = shoot.category.category_idx
-                                            JOIN
-                                                shoot.channel
-                                            ON 
-                                                upload_channel_email = email
-                                            WHERE
-                                                post_idx = $1
-                                        `
-                    const selectPostResult = await pgClient.query(selectPostSql, [postData._id]);
-                    postArray.push(selectPostResult.rows[0]);
-                }
-
-                resolve({
-                    postArray : postArray,
-                    scrollId : searchResult._scroll_id
-                });
-            }else if(matchType === 'hashtag'){
-                //search post on es
-                const searchResult = await esClient.search({
-                    index : 'post',
-                    body : {
-                        query : {
-                            wildcard : {
-                                hashtag : `${match}`
-                            }
-                        },
-                        sort : [sortObj]
-                    },
-                    size : size,
-                    scroll : '3m'
-                });
-
-                //SELECT post
-                const postArray = [];
-                for(postData of searchResult.hits.hits){
-                    //SELECT post
-                    const selectPostSql = `SELECT 
-                                                post_idx,
-                                                post_title,
-                                                post_thumbnail,
-                                                post_upload_time,
-                                                post_view_count,
-                                                post_good_count,
-
-                                                shoot.category.category_idx,
-                                                category_name,
-
-                                                upload_channel_email,
-                                                name AS channel_name,
-                                                profile_img
-                                            FROM
-                                                shoot.post
-                                            LEFT JOIN
-                                                shoot.category
-                                            ON
-                                                shoot.post.category_idx = shoot.category.category_idx
-                                            JOIN
-                                                shoot.channel
-                                            ON 
-                                                upload_channel_email = email
-                                            WHERE
-                                                post_idx = $1
-                                        `
-                    const selectPostResult = await pgClient.query(selectPostSql, [postData._id]);
-                    postArray.push(selectPostResult.rows[0]);
-                }
-
-                console.log(searchResult.hits.hits);
-                resolve({
-                    postArray : postArray,
-                    scrollId : searchResult._scroll_id
-                });
-            }else{
-                reject({
-                    statusCode : 400,
-                    message : 'invalid match type'
-                });
-            }
         }catch(err){
             reject({
                 statusCode : 409,
