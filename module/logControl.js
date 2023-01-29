@@ -190,12 +190,28 @@ const getLogByLogId = (loginUserAuthority = 0, logId = '') => {
         }
 
         try{
-            const searchResult = await esClient.search({
+            const searchResult = await esClient.get({
                 index : 'log',
                 id : logId
             });
+            
+            resolve({
+                id : searchResult._id,
+                ...searchResult._source
+            })
         }catch(err){
-
+            if(err.status === 404){
+                reject({
+                    statusCode : 404,
+                    message : 'cannot find log'
+                });
+            }else{
+                reject({
+                    statusCode : 409,
+                    message : 'unexpected error occured',
+                    err : err
+                })
+            }
         }
     });
 }
