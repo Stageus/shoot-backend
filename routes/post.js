@@ -18,7 +18,7 @@ router.get('/all', async (req, res) => {
     //to FE
     const result = {};
     let statusCode = 200;
-    
+
     //main
     try{
         let postData = {};
@@ -29,8 +29,7 @@ router.get('/all', async (req, res) => {
         }else if(searchType){
             postData = await getPostBySearch(searchType, search, sortby, orderby);
         }else{
-            //아직 구현 안됨
-            postData = await getPostAll(20);
+            postData = await getPostAll(sortby, orderby, 20);
         }
         result.data = postData.postArray;
         result.scroll = postData.scrollId;
