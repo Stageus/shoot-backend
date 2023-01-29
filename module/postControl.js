@@ -6,6 +6,7 @@ const AWS = require('aws-sdk');
 const awsConfig = require('../config/awsConfig');
 const postDataValidCheck = require('./postDataValidCheck');
 
+//미완성
 const getPostAll = (size = 20) => {
     return new Promise(async (resolve, reject) => {
         const pgClient = new Client(pgConfig);
@@ -73,7 +74,7 @@ const getPostAll = (size = 20) => {
     })
 }
 
-const getPostByScrollId = (scrollId) => {
+const getPostByScrollId = (scrollId = '') => {
     return new Promise(async (resolve, reject) => {
         const pgClient = new Client(pgConfig);
         const esClient = new elastic.Client({

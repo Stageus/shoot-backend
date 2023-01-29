@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { getBookmarkPostAll, addPost, deletePost, getPostByPostIdx, getPostByScrollId, modifyPost, getPostByMatch, getPostBySearch, getHotPostAll, getHistoryPostAll } = require('../module/postControl');
+const { getBookmarkPostAll, addPost, deletePost, getPostByPostIdx, getPostByScrollId, modifyPost, getPostByMatch, getPostBySearch, getHotPostAll, getHistoryPostAll, getPostAll } = require('../module/postControl');
 const loginAuth = require('../middleware/loginAuth');
 const postFileUpload = require('../middleware/postFileUpload');
 const verifyToken = require('../module/verifyToken');
@@ -18,7 +18,7 @@ router.get('/all', async (req, res) => {
     //to FE
     const result = {};
     let statusCode = 200;
-
+    
     //main
     try{
         let postData = {};
