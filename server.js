@@ -33,6 +33,7 @@ const subscribeApi = require('./routes/subscribe');
 const { httpPort, httpsPort } = require('./config/portConfig');
 const { publicPath } = require('./config/pathConfig');
 const sessionOption = require('./config/sessionConfig');
+const loggingSetting = require('./middleware/loggingSetting');
 
 // setting ==========================================================
 let redisClient = createClient({ legacyMode: true });
@@ -45,6 +46,7 @@ app.use(cookieParser());
 app.use(session(sessionOption));
 app.use(passport.initialize());
 app.use(passport.session());
+app.use(loggingSetting());
 
 // routes ===========================================================
 app.use('/post', postApi);
@@ -74,6 +76,6 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(publicPath, 'index.html')); 
 });
 
-app.listen(httpPort, () => {
+app.listen(httpPort, '0.0.0.0', () => {
     console.log(`server on port : ${httpPort}`);
 });
