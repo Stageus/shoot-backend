@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { getBookmarkPostAll, addPost, deletePost, getPostByPostIdx, getPostByScrollId, modifyPost, getPostByMatch, getPostBySearch, getHotPostAll, getHistoryPostAll, getPostAll } = require('../module/postControl');
+const { getBookmarkPostAll, addPost, deletePost, getPostByPostIdx, getPostByScrollId, modifyPost, getPostByMatch, getPostBySearch, getHotPostAll, getHistoryPostAll, getPostAll, getSubscribePostAll } = require('../module/postControl');
 const loginAuth = require('../middleware/loginAuth');
 const postFileUpload = require('../middleware/postFileUpload');
 const verifyToken = require('../module/verifyToken');
@@ -96,7 +96,7 @@ router.get('/subscribe/all', loginAuth, async (req, res) => {
 
     //main
     try{
-        result.data = await getSubscribePostAll(loginUserEmail, groupby, scroll, 20);
+        result.data = await getSubscribePostAll(loginUserEmail, groupby, scroll, 10);
     }catch(err){
         err.err ? console.log(err.err) : null;
 
@@ -119,7 +119,7 @@ router.get('/bookmark/all', loginAuth, async (req, res) => {
 
     //main
     try{
-        result.data = await getBookmarkPostAll(loginUserEmail, scroll, 20);
+        result.data = await getBookmarkPostAll(loginUserEmail, scroll, 2);
     }catch(err){
         err.err ? console.log(err.err) : null;
 

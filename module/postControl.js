@@ -571,7 +571,7 @@ const getPostBySearch = (searchType, search = '', sortby = 'date', orderby = 'de
     }) 
 }
 
-const getHotPostAll = (size = 20, hot = 10) => {
+const getHotPostAll = (size = 20, hot = 1) => {
     return new Promise(async (resolve, reject) => {
         const pgClient = new Client(pgConfig);
         const esClient = new elastic.Client({
@@ -687,7 +687,7 @@ const getBookmarkPostAll = (loginUserEmail = '', scroll = -1, size = 20) => {
                                     WHERE
                                         shoot.bookmark.email = $1 ${scroll !== -1 ? `
                                         AND
-                                            shoot.bookmark.bookmark_time < (SELECT bookmark_time FROM shoot.bookmark WHERE post_idx = $2)
+                                            shoot.bookmark.bookmark_time < (SELECT bookmark_time FROM shoot.bookmark WHERE post_idx = $2 AND shoot.bookmark.email = $1)
                                         ` : ''}
                                     ORDER BY
                                         shoot.bookmark.bookmark_time DESC 
@@ -729,36 +729,90 @@ const getSubscribePostAll = (loginUserEmail = '', groupby = 'post', scroll = -1,
                                                 
                                                 shoot.post.upload_channel_email,
                                                 shoot.channel.name AS upload_channel_name,
-                                                shoot.channel.profile_img,
-
-                                                shoot.bookmark.bookmark_time
+                                                shoot.channel.profile_img
                                             FROM
-                                                shoot.bookmark
+                                                shoot.post
                                             JOIN
                                                 shoot.channel
                                             ON
-                                                shoot.bookmark.email = shoot.channel.email
+                                                shoot.post.upload_channel_email = shoot.channel.email
                                             JOIN
-                                                shoot.post
+                                                shoot.subscribe
                                             ON
-                                                shoot.bookmark.post_idx = shoot.post.post_idx
+                                                shoot.subscribe.subscribed_channel_email = shoot.post.upload_channel_email
                                             LEFT JOIN
                                                 shoot.category
                                             ON
                                                 shoot.post.category_idx = shoot.category.category_idx
                                             WHERE
-                                                shoot.bookmark.email = $1 ${scroll !== -1 ? `
-                                                AND
-                                                    shoot.bookmark.bookmark_time < (SELECT bookmark_time FROM shoot.bookmark WHERE post_idx = $2)
-                                                ` : ''}
+                                                shoot.subscribe.subscriber_channel_email = $1 ${scroll !== -1 ? `AND post_idx < $2` : ''}
                                             ORDER BY
-                                                shoot.bookmark.bookmark_time DESC 
+                                                post_upload_time DESC
                                             LIMIT
                                                 ${size}
                                             `;
                 const selectSubscribeResult = await pgClient.query(selectSubscribeSql, scroll === -1 ? [loginUserEmail] : [loginUserEmail, scroll]);
 
                 resolve(selectSubscribeResult.rows);
+            }else if(groupby === 'channel'){
+                //SELECT channel
+                const selectChannelSql = `SELECT
+                                                shoot.channel.email AS upload_channel_email,
+                                                shoot.channel.name AS channel_name,
+                                                shoot.channel.profile_img
+                                            FROM
+                                                shoot.subscribe
+                                            JOIN
+                                                shoot.channel
+                                            ON
+                                                shoot.channel.email = shoot.subscribe.subscribed_channel_email
+                                            WHERE
+                                                shoot.subscribe.subscriber_channel_email = $1 ${scroll !== -1 ? `
+                                                AND
+                                                    shoot.subscribe.subscribe_time < (SELECT subscribe_time FROM shoot.subscribe WHERE subscribed_channel_email = $2 AND subscriber_channel_email = $1)
+                                                ` : ''}
+                                            ORDER BY
+                                                shoot.subscribe.subscribe_time DESC
+                                            LIMIT
+                                                ${size}
+                                            `;
+                const selectChannelResult = await pgClient.query(selectChannelSql, scroll !== -1 ? [loginUserEmail, scroll] : [loginUserEmail]);
+
+                for(channelData of selectChannelResult.rows){
+                    //select post data
+                    const selectPostSql = `SELECT 
+                                                post_idx,
+                                                post_title,
+                                                post_thumbnail,
+                                                post_upload_time,
+                                                post_view_count,
+                                                post_good_count,
+                                                
+                                                shoot.category.category_idx,
+                                                category_name
+                                            FROM 
+                                                shoot.post
+                                            JOIN
+                                                shoot.category
+                                            ON
+                                                shoot.post.category_idx = shoot.category.category_idx
+                                            WHERE
+                                                shoot.post.upload_channel_email = $1
+                                            ORDER BY
+                                                shoot.post.post_idx DESC
+                                            LIMIT
+                                                10
+                                            `;
+                    const selectPostResult = await pgClient.query(selectPostSql, [channelData.upload_channel_email]);
+                    channelData.post = selectPostResult.rows;
+                }
+
+                resolve(selectChannelResult.rows);
+            }else{
+                reject({
+                    statusCode : 400,
+                    message : 'invalid groupby query'
+                }); 
             }
         }catch(err){
             reject({
@@ -767,6 +821,67 @@ const getSubscribePostAll = (loginUserEmail = '', groupby = 'post', scroll = -1,
                 err : err
             });
         }
+
+        const a = [
+            {
+                id : 'asd123',
+                posts : [
+                    {
+                        author : 'asd123',
+                        title : 'asdf'
+                    },
+                    {
+                        author : 'asd123',
+                        title : 'asdf'
+                    },
+                    {
+                        author : 'asd123',
+                        title : 'asdf'
+                    },
+                    {
+                        author : 'asd123',
+                        title : 'asdf'
+                    },
+                    {
+                        author : 'asd123',
+                        title : 'asdf'
+                    },
+                    {
+                        author : 'asd123',
+                        title : 'asdf'
+                    },
+                ]
+            },
+            {
+                id : 'asd123',
+                posts : [
+                    {
+                        author : 'asd123',
+                        title : 'asdf'
+                    },
+                    {
+                        author : 'asd123',
+                        title : 'asdf'
+                    },
+                    {
+                        author : 'asd123',
+                        title : 'asdf'
+                    },
+                    {
+                        author : 'asd123',
+                        title : 'asdf'
+                    },
+                    {
+                        author : 'asd123',
+                        title : 'asdf'
+                    },
+                    {
+                        author : 'asd123',
+                        title : 'asdf'
+                    },
+                ]
+            }
+        ]
     });
 }
 

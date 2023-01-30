@@ -18,6 +18,9 @@ const addChannel = (channelData, loginType = 'local') => {
         }
 
         const pgClient = new Client(pgConfig);
+        const esClient = elastic.Client({
+            node : "http://localhost:9200"
+        });
 
         try{
             //connect psql
@@ -108,17 +111,13 @@ const addChannel = (channelData, loginType = 'local') => {
                 //INSERT psql
                 await pgClient.query(insertSql, insertArray);
 
-                //index elasticsearch
-                const esClient = elastic.Client({
-                    node : "http://localhost:9200"
-                });
                 await esClient.index({
                     index : 'channel',
                     id : email,
                     body : {
                         name : channelName
                     }
-                })
+                });
             }
             
             //COMMIT
