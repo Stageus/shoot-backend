@@ -1,6 +1,47 @@
 const { Client } = require('pg');
 const pgConfig = require('../config/psqlConfig');
 
+const getNotificationOffState = (loginUserEmail, type = 'post', idx = -1) => {
+    return new Promise(async (resolve, reject) => {
+        const pgClient = new Client(pgConfig);
+
+        const typeCode = {
+            post : 0,
+            comment : 1,
+            reply_comment : 2
+        }
+
+        try{
+            if(typeCode[type] !== undefined){
+                await pgClient.connect();
+
+                //SELECT notification off
+                const selectNotificationOffSql = 'SELECT type, idx, email FROM shoot.notification_off WHERE email = $1 AND type = $2 AND idx = $3';
+                const selectNotificationOffResult = await pgClient.query(selectNotificationOffSql, [loginUserEmail, typeCode[type], idx]);
+
+                console.log(selectNotificationOffResult.rows[0]);
+
+                if(selectNotificationOffResult.rows[0]){
+                    resolve(selectNotificationOffResult.rows[0]);
+                }else{
+                    resolve({});
+                }
+            }else{
+                reject({
+                    statusCode : 400,
+                    message : 'invalid type'
+                });    
+            }
+        }catch(err){
+            reject({
+                statusCode : 409,
+                message : 'unexpected error occured',
+                err : err
+            });
+        }
+    });
+}
+
 const addNotificationOff = (loginUserEmail = '', type = 'post', idx = -1) => {
     return new Promise(async (resolve, reject) => {
         const pgClient = new Client(pgConfig);
@@ -101,5 +142,6 @@ const deleteNotificationOff = (loginUserEmail, type, idx) => {
 
 module.exports = {
     addNotificationOff : addNotificationOff,
-    deleteNotificationOff : deleteNotificationOff
+    deleteNotificationOff : deleteNotificationOff,
+    getNotificationOffState : getNotificationOffState
 }
