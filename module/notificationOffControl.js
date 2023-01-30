@@ -57,6 +57,49 @@ const addNotificationOff = (loginUserEmail = '', type = 'post', idx = -1) => {
     });
 }
 
+const deleteNotificationOff = (loginUserEmail, type, idx) => {
+    return new Promise(async (resolve, reject) => {
+        const pgClient = new Client(pgConfig);
+
+        const typeCode = {
+            post : 0,
+            comment : 1,
+            reply_comment : 2
+        }
+
+        try{
+            await pgClient.connect();
+         
+            if(typeCode[type] !== undefined){
+                //DELETE
+                const deleteNotificationOffSql = 'DELETE FROM shoot.notification_off WHERE email = $1 AND type = $2 AND idx = $3';
+                const deleteNotificationOffResult = await pgClient.query(deleteNotificationOffSql, [loginUserEmail, typeCode[type], idx]);
+
+                if(deleteNotificationOffResult.rowCount){
+                    resolve(1);
+                }else{
+                    reject({
+                        statusCode : 404,
+                        message : 'cannot find notification off data'
+                    });
+                }
+            }else{
+                reject({
+                    statusCode : 400,
+                    message : 'invalid type'
+                });
+            }
+        }catch(err){
+            reject({
+                statusCode : 409,
+                message : 'unexpected error occured',
+                err : err
+            });
+        }
+    });
+}
+
 module.exports = {
-    addNotificationOff : addNotificationOff
+    addNotificationOff : addNotificationOff,
+    deleteNotificationOff : deleteNotificationOff
 }
