@@ -1,6 +1,29 @@
 const router = require('express').Router();
 const loginAuth = require('../middleware/loginAuth');
-const { addNotificationOn, deleteNotificationOn } = require('./notificationOnControl');
+const { addNotificationOn, deleteNotificationOn, getNotificationOn } = require('./notificationOnControl');
+
+router.get('/', loginAuth, async (req, res) => {
+    //from FE
+    const loginUserEmail = req.email;
+    const notiEmail = req.query.email || '';
+
+    //to FE
+    const result = {};
+    let statusCode = 200;
+
+    //main
+    try{
+        result.data = await getNotificationOn(loginUserEmail, notiEmail);
+    }catch(err){
+        err.err ? console.log(err) : null;
+
+        result.message = err.message;
+        statusCode = err.statusCode || 409;
+    }
+
+    //send result
+    res.status(statusCode).send(result);
+})
 
 router.post('/', loginAuth, async (req, res) => {
     //from FE
