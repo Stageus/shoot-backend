@@ -3,6 +3,24 @@ const pgConfig = require('../config/psqlConfig');
 const elastic = require('elasticsearch');
 const channelHash = require('../module/channelHash');
 
+const getAllNotification = (notifiedUserEmail) => {
+    return new Promise(async (resolve, reject) => {
+        const esClient = new elastic.Client({
+            node : 'http://localhost:9200'            
+        });
+
+        try{
+
+        }catch(err){
+            reject({
+                statusCode : 409,
+                message : 'unexpected error occured',
+                err : err
+            });
+        }
+    });
+}
+
 const addNotification = (notifyEmail, notiInfo) => {
     return new Promise(async (resolve, reject) => {
         const pgClient = new Client(pgConfig);
@@ -140,5 +158,6 @@ const addPostUploadNoti = (uploadChannelEmail, postIdx) => {
 }
 
 module.exports = { 
-    addNotification : addNotification
+    addNotification : addNotification,
+    getAllNotification : getAllNotification
 }

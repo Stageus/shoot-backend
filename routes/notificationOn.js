@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const loginAuth = require('../middleware/loginAuth');
-const { addNotificationOn, deleteNotificationOn, getNotificationOn } = require('./notificationOnControl');
+const { addNotificationOn, deleteNotificationOn, getNotificationOn } = require('../module/notificationOnControl');
 
 router.get('/', loginAuth, async (req, res) => {
     //from FE
