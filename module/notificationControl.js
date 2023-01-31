@@ -3,14 +3,35 @@ const pgConfig = require('../config/psqlConfig');
 const elastic = require('elasticsearch');
 const channelHash = require('../module/channelHash');
 
-const getAllNotification = (notifiedUserEmail) => {
+const getAllNotification = (notifiedUserEmail, size = 10) => {
     return new Promise(async (resolve, reject) => {
         const esClient = new elastic.Client({
             node : 'http://localhost:9200'            
         });
 
         try{
+            const searchResult = await esClient.search({
+                index : 'notification',
+                body : {
+                    query : {
+                        match : {
+                            notified_email : notifiedUserEmail
+                        }
+                    },
+                    sort : [
+                        {
+                            notification_time : 'DESC'
+                        }
+                    ]
+                },
+                size : size,
+                scroll : '3m'
+            });
 
+            resolve({
+                notification : searchResult.hits.hits.map((noti) => noti._source),
+                scrollId : searchResult._scroll_id
+            });
         }catch(err){
             reject({
                 statusCode : 409,
