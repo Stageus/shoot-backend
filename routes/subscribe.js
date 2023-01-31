@@ -5,7 +5,7 @@ const { addSubscribe, deleteSubscribe } = require('../module/subscribeControl');
 router.post('/', loginAuth, async (req, res) => {
     //from FE
     const loginUserEmail = req.email || '';
-    const subscribedChannelEmail = req.query['channel-email'] || '';
+    const subscribedChannelEmail = req.query['email'] || '';
 
     //to FE
     const result = {};
@@ -28,7 +28,7 @@ router.post('/', loginAuth, async (req, res) => {
 router.delete('/', loginAuth, async (req, res) => {
     //from FE
     const loginUserEmail = req.email;
-    const subscribedChannelEmail = req.query['channel-email'];
+    const subscribedChannelEmail = req.query['email'];
 
     //to FE
     const result = {};

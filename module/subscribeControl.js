@@ -1,5 +1,6 @@
 const { Client } = require('pg');
 const pgConfig = require('../config/psqlConfig');
+const { addNotification } = require('./notificationControl');
 
 const addSubscribe = (loginUserEmail = '', subscribedChannelEmail = '') => {
     return new Promise(async (resolve, reject) => {
@@ -18,6 +19,11 @@ const addSubscribe = (loginUserEmail = '', subscribedChannelEmail = '') => {
             //INSERT
             const insertSubscribeSql = 'INSERT INTO shoot.subscribe (subscriber_channel_email, subscribed_channel_email) VALUES ($1, $2)';
             await pgClient.query(insertSubscribeSql, [loginUserEmail, subscribedChannelEmail]);
+
+            addNotification(loginUserEmail, {
+                type : 5,
+                notifiedEmail : subscribedChannelEmail,
+            });
 
             resolve(1);
         }catch(err){

@@ -2,6 +2,7 @@ const elastic = require('elasticsearch');
 const { Client } = require('pg');
 const pgConfig = require('../config/psqlConfig');
 const commentDataValidCheck = require('./commentDataValidCheck');
+const { addNotification } = require('./notificationControl');
 
 const getAllReplyComment = (commentIdx,loginUserEmail = '', scroll = 2147483647, size = 20) => {
     return new Promise(async (resolve, reject) => {
@@ -84,12 +85,21 @@ const addReplyComment = (contents, commentIdx, loginUserEmail) => {
             await pgClient.query('BEGIN');
 
             //INSERT
-            const insertReplyCommentSql = 'INSERT INTO shoot.reply_comment (comment_idx, reply_comment_contents, write_channel_email) VALUES ($1, $2, $3)';
-            await pgClient.query(insertReplyCommentSql, [commentIdx, contents, loginUserEmail]);
+            const insertReplyCommentSql = 'INSERT INTO shoot.reply_comment (comment_idx, reply_comment_contents, write_channel_email) VALUES ($1, $2, $3) RETURNING reply_comment_idx';
+            const insertReplyCommentResult = await pgClient.query(insertReplyCommentSql, [commentIdx, contents, loginUserEmail]);
 
             //UPDATE
-            const updateCommentSql = 'UPDATE shoot.comment SET reply_comment_count = reply_comment_count + 1 WHERE comment_idx = $1';
-            await pgClient.query(updateCommentSql, [commentIdx]);
+            const updateCommentSql = 'UPDATE shoot.comment SET reply_comment_count = reply_comment_count + 1 WHERE comment_idx = $1 RETURNING write_channel_email';
+            const updateCommentResult = await pgClient.query(updateCommentSql, [commentIdx]);
+
+            if(loginUserEmail !== updateCommentResult.rows[0].write_channel_email){
+                console.log('대댓글 추가 알림 생성');
+                addNotification(loginUserEmail, {
+                    type : 3,
+                    notifiedEmail : updateCommentResult.rows[0].write_channel_email,
+                    idx : parseInt(insertReplyCommentResult.rows[0].reply_comment_idx)
+                });
+            }
 
             //COMMIT
             await pgClient.query('COMMIT');

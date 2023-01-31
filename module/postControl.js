@@ -5,6 +5,7 @@ const verifyToken = require('../module/verifyToken');
 const AWS = require('aws-sdk');
 const awsConfig = require('../config/awsConfig');
 const postDataValidCheck = require('./postDataValidCheck');
+const { addNotification } = require('./notificationControl');
 
 const getPostAll = (sortby = 'date', orderby = 'desc', size = 20) => {
     return new Promise(async (resolve, reject) => {
@@ -1016,7 +1017,12 @@ const addPost = (postData) => {
                     post_upload_time : postUploadTime,
                     post_good_count : 0
                 }
-            })
+            });
+
+            addNotification(postData.email, {
+                type : 6,
+                idx : postIdx
+            });
 
             //COMMIT
             await pgClient.query('COMMIT');

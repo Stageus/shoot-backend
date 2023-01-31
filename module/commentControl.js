@@ -2,6 +2,7 @@ const elastic = require('elasticsearch');
 const { Client } = require('pg');
 const pgConfig = require('../config/psqlConfig');
 const commentDataValidCheck = require('./commentDataValidCheck');
+const { addNotification } = require('./notificationControl');
 
 const getCommentByScroll = (scrollId, loginUserEmail) => {
     return new Promise(async (resolve, reject) => {
@@ -197,12 +198,12 @@ const addComment = (contents = '', postIdx = '', loginUserEmail = '') => {
                 await pgClient.query('BEGIN');
 
                 //INSERT
-                const insertCommentSql = 'INSERT INTO shoot.comment (comment_contents, post_idx, write_channel_email) VALUES ($1, $2, $3) RETURNING comment_idx';
+                const insertCommentSql = 'INSERT INTO shoot.comment (comment_contents, post_idx, write_channel_email) VALUES ($1, $2, $3) RETURNING comment_idx, write_channel_email';
                 const insertCommentResult = await pgClient.query(insertCommentSql, [contents, postIdx, loginUserEmail]);
 
                 //UPDATE
-                const updatePostSql = 'UPDATE shoot.post SET comment_count = comment_count + 1 WHERE post_idx = $1';
-                await pgClient.query(updatePostSql, [postIdx]);
+                const updatePostSql = 'UPDATE shoot.post SET comment_count = comment_count + 1 WHERE post_idx = $1 RETURNING upload_channel_email';
+                const updatePostResult = await pgClient.query(updatePostSql, [postIdx]);
 
                 //ES
                 await esClient.index({
@@ -213,6 +214,14 @@ const addComment = (contents = '', postIdx = '', loginUserEmail = '') => {
                         post_idx : postIdx
                     }
                 });
+
+                if(updatePostResult.rows[0].upload_channel_email !== loginUserEmail){
+                    addNotification(loginUserEmail, {
+                        type : 1,
+                        notifiedEmail : updatePostResult.rows[0].upload_channel_email,
+                        idx : parseInt(insertCommentResult.rows[0].comment_idx)
+                    });
+                }
 
                 //COMMIT
                 await pgClient.query('COMMIT');

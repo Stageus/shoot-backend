@@ -1,6 +1,7 @@
 const elastic = require('elasticsearch');
 const { Client } = require('pg');
 const pgConfig = require('../config/psqlConfig');
+const { addNotification } = require('./notificationControl');
 
 const addPostGood = (postIdx = -1, loginUserEmail = '') => {
     return new Promise(async (resolve, reject) => {
@@ -20,7 +21,7 @@ const addPostGood = (postIdx = -1, loginUserEmail = '') => {
             await pgClient.query(insertPostGoodSql, [postIdx, loginUserEmail]);
 
             //UPDATE post good count
-            const updatePostGoodSql = 'UPDATE shoot.post SET post_good_count = post_good_count + 1 WHERE post_idx = $1 RETURNING post_good_count';
+            const updatePostGoodSql = 'UPDATE shoot.post SET post_good_count = post_good_count + 1 WHERE post_idx = $1 RETURNING post_good_count, upload_channel_email';
             const updatePostGoodResult = await pgClient.query(updatePostGoodSql, [postIdx]);
 
             //update post good count on es
@@ -33,6 +34,15 @@ const addPostGood = (postIdx = -1, loginUserEmail = '') => {
                     }
                 }
             });
+
+            //add notification
+            if(loginUserEmail !== updatePostGoodResult.rows[0].upload_channel_email){
+                addNotification(loginUserEmail, {
+                    type : 0,
+                    notifiedEmail : updatePostGoodResult.rows[0].upload_channel_email,
+                    idx : parseInt(postIdx)
+                });
+            }
 
             //COMMIT
             await pgClient.query('COMMIT');

@@ -1,6 +1,7 @@
 const elastic = require('elasticsearch');
 const { Client } = require('pg');
 const pgConfig = require('../config/psqlConfig');
+const { addNotification } = require('./notificationControl');
 
 const addCommentGood = (commentIdx = -1, loginUserEmail = '') => {
     return new Promise(async (resolve, reject) => {
@@ -20,7 +21,7 @@ const addCommentGood = (commentIdx = -1, loginUserEmail = '') => {
             await pgClient.query(insertCommentGoodSql, [commentIdx, loginUserEmail]);
 
             //UPDATE comment good count
-            const updateCommentGoodSql = 'UPDATE shoot.comment SET comment_good_count = comment_good_count + 1 WHERE comment_idx = $1 RETURNING comment_good_count';
+            const updateCommentGoodSql = 'UPDATE shoot.comment SET comment_good_count = comment_good_count + 1 WHERE comment_idx = $1 RETURNING comment_good_count, write_channel_email';
             const updateCommentGoodResult = await pgClient.query(updateCommentGoodSql, [commentIdx]);
 
             //update comment good count on es
@@ -33,6 +34,14 @@ const addCommentGood = (commentIdx = -1, loginUserEmail = '') => {
                     }
                 }
             });
+
+            if(updateCommentGoodResult.rows[0].write_channel_email !== loginUserEmail){
+                addNotification(loginUserEmail, {
+                    type : 2,
+                    notifiedEmail : updateCommentGoodResult.rows[0].write_channel_email,
+                    idx : parseInt(commentIdx)
+                });
+            }
 
             //COMMIT
             await pgClient.query('COMMIT');
