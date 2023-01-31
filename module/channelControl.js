@@ -1,5 +1,5 @@
 const elastic = require('elasticsearch');
-const { Client, Pool } = require('pg');
+const { Client } = require('pg');
 const redis = require('redis').createClient();
 const pgConfig = require('../config/psqlConfig');
 const channelDataValidCheck = require('./channelDataValidCheck');
@@ -141,13 +141,13 @@ const addChannel = (channelData, loginType = 'local') => {
     })
 }
 
-const getChannel = (channelEamil) => {
+const getChannel = (channelEamil, loginUserEmail = '') => {
     return new Promise(async (resolve, reject) => {
         const pgClient = new Client(pgConfig);
         try{
             await pgClient.connect();
 
-            const selectChannelSql = 'SELECT name, birth, sex, authority, creation_time, description, profile_img FROM shoot.channel WHERE email = $1';
+            const selectChannelSql = 'SELECT email, name, birth, sex, authority, creation_time, description, profile_img, subscribe_count FROM shoot.channel WHERE email = $1';
             const selectChannelResult = await pgClient.query(selectChannelSql, [channelEamil]);
 
             if(selectChannelResult.rows.length === 0){
@@ -158,16 +158,15 @@ const getChannel = (channelEamil) => {
             }else{
                 const channelData = selectChannelResult.rows[0];
 
-                resolve({
-                    email : channelEamil,
-                    name : channelData.name,
-                    birth : channelData.birth,
-                    sex : channelData.sex,
-                    authority : channelData.int,
-                    creation_time : channelData.creation_time,
-                    description : channelData.description,
-                    profile_img : channelData.profile_img
-                });
+                if(loginUserEmail.length !== 0){
+                    //SELECT subscribe
+                    const selectSubscribeSql = 'SELECT * FROM shoot.subscribe WHERE subscriber_channel_email = $1 AND subscribed_channel_email = $2';
+                    const selectSubscribeResult = await pgClient.query(selectSubscribeSql, [loginUserEmail, channelEamil]);
+
+                    channelData.subscribe_state = selectSubscribeResult.rows[0] !== undefined;
+                }
+
+                resolve(channelData);
             }
         }catch(err){
             reject({
@@ -255,23 +254,22 @@ const getAllChannel = (searchKeyword, scrollId = undefined, size = 30) => {
 
 const deleteChannel = (deleteEmail, token) => {
     return new Promise(async (resolve, reject) => {
+        const pgClient = new Client(pgConfig);
+        const esClient = elastic.Client({
+            node : "http://localhost:9200"
+        });
+
         const verify = verifyToken(token);
 
         if(verify.state){
             const loginUserEmail = verify.email;
             try{
-                const pgClient = new Client(pgConfig);
                 await pgClient.connect();
-
-                const esClient = elastic.Client({
-                    node : "http://localhost:9200"
-                });
 
                 //SELECT login user email and authority
                 const selectSql = 'SELECT email, authority FROM shoot.channel WHERE email = $1';
                 const selectResult = await pgClient.query(selectSql, [deleteEmail]);
 
-                console.log(deleteEmail);
                 //check email existence
                 if(selectResult.rows.length === 0){
                     reject({
@@ -303,10 +301,17 @@ const deleteChannel = (deleteEmail, token) => {
                         }
                     });
 
-                    //DELETE comment
-                    const deleteCommentQuery = 'DELETE FROM shoot.comment WHERE wirte_channel_email = $1';
-                    const deleteCommentResult = await pgClient.query(deleteCommentQuery, [deleteEmail]);
-                    console.log(deleteCommentResult.rows);
+                    //delete post on elasticsearch
+                    await esClient.deleteByQuery({
+                        index : 'notification',
+                        body : {
+                            query : {
+                                match : {
+                                    notified_email : deleteEmail
+                                }
+                            }
+                        }
+                    });
 
                     //DELETE channel
                     const deleteChannelQuery = 'DELETE FROM shoot.channel WHERE email = $1';
@@ -329,6 +334,8 @@ const deleteChannel = (deleteEmail, token) => {
                     })
                 }
             }catch(err){
+                await pgClient.query('ROLLBACK');
+
                 reject({
                     message : 'unexpected error occured',
                     statusCode : 409,

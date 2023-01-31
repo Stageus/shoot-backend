@@ -64,21 +64,16 @@ router.get('/google', passport.authenticate('google', { scope: ['profile', 'emai
 router.get('/google/callback', (req, res) => {
     passport.authenticate('google', async (err, email, info) => {
         if(err){
-            console.log(err);
-
-            if(err.statusCode === 409){
-                //unexpected error
+            if(err.statusCode === 409){ //unexpected error
                 res.cookie('statusCode', 409);
-                res.redirect('/login');
-            }else if(err.statusCode === 403){
-                //blocked email
+            }else if(err.statusCode === 403){ //blocked email
                 res.cookie('statusCode', 403);
                 res.cookie('blockEndTime', err.blockEndTime);
                 res.cookie('blockReason', err.blockReason);
             }
-            // ==============================================여기 로그인 페이지로 리디렉션 코드 넣어야함
-        }else if(info){
-            //first login
+
+            res.redirect('/login');
+        }else if(info){ //first login
             await redis.connect();
     
             await redis.set(`certified_email_${email}_google`);
@@ -89,9 +84,9 @@ router.get('/google/callback', (req, res) => {
             res.cookie('statusCode', 200);
             res.cookie('loginType', 'google');
             res.cookie('email', email);
+
             res.redirect('/signup');
-        }else{
-            //login success
+        }else{ //login success
             const token = createToken(email);
             res.cookie('token', token);
 
@@ -115,7 +110,6 @@ router.get('/channel', loginAuth, async (req, res) => {
 
     //main
     try{
-        console.log('/auth/channel');
         const channelData = await getChannel(email);
         
         result.data = channelData;

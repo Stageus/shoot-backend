@@ -15,10 +15,20 @@ const addSubscribe = (loginUserEmail = '', subscribedChannelEmail = '') => {
         const pgClient = new Client(pgConfig);
         try{
             await pgClient.connect();
+
+            //BEGIN
+            await pgClient.query('BEGIN');
             
             //INSERT
             const insertSubscribeSql = 'INSERT INTO shoot.subscribe (subscriber_channel_email, subscribed_channel_email) VALUES ($1, $2)';
             await pgClient.query(insertSubscribeSql, [loginUserEmail, subscribedChannelEmail]);
+
+            //UPDATE
+            const updateChannelSql = 'UPDATE shoot.channel SET subscribe_count = subscribe_count + 1 WHERE email = $1';
+            await pgClient.query(updateChannelSql, [subscribedChannelEmail]);
+
+            //COMMIT
+            await pgClient.query('COMMIT');
 
             addNotification(loginUserEmail, {
                 type : 5,
@@ -27,6 +37,9 @@ const addSubscribe = (loginUserEmail = '', subscribedChannelEmail = '') => {
 
             resolve(1);
         }catch(err){
+            //ROLLBACK
+            await pgClient.query('ROLLBACK');
+
             if(err.code == 23505){
                 reject({
                     statusCode : 403,
@@ -54,19 +67,35 @@ const deleteSubscribe = (loginUserEmail, subscribedChannelEmail) => {
         try{
             await pgClient.connect();
 
+            //BEGIN
+            await pgClient.query('BEGIN');
+
             //DELETE subscribe
             const deleteSubscribeSql = 'DELETE FROM shoot.subscribe WHERE subscriber_channel_email = $1 AND subscribed_channel_email = $2';
             const deleteSubscribeResult = await pgClient.query(deleteSubscribeSql, [loginUserEmail, subscribedChannelEmail]);
 
             if(deleteSubscribeResult.rowCount !== 0){
-                resolve();
+                //UPDATE
+                const updateChannelSql = 'UPDATE shoot.channel SET subscribe_count = subscribe_count - 1 WHERE email = $1';
+                await pgClient.query(updateChannelSql, [subscribedChannelEmail]);
+
+                //COMMIT
+                await pgClient.query('COMMIT');
+
+                resolve(1);
             }else{
+                //ROLLBACK
+                await pgClient.query('ROLLBACK');
+
                 reject({
                     statusCode : 403,
                     message : 'subscribe data does not exist'
                 });
             }
         }catch(err){
+            //ROLLBACK
+            await pgClient.query('ROLLBACK');
+            
             reject({
                 statusCode : 409,
                 message : 'unexpected error occured',

@@ -51,19 +51,13 @@ router.get('/:email', async (req, res) => {
             result.message = 'blocked channel';
             statusCode = 404;
         }else{
-            result.data = await getChannel(email);
-
-            //get subscribe state
-            const verify = verifyToken(token);
-            const myEmail = verify.email;
-            if(verify.state && email !== myEmail){
-                const subscribeData = await getSubscribeState(myEmail, email);
-                result.data.subscribe_state = subscribeData.state;
-            }
+            result.data = await getChannel(email, verifyToken(token).email);
         }
     }catch(err){
+        err.err ? console.log(err) : null;
+
         result.message = err.message;
-        statusCode = err.statusCode;
+        statusCode = err.statusCode || 409;
     }
 
     //send result
@@ -108,12 +102,13 @@ router.delete('/:channelEmail', loginAuth, async (req, res) => {
     
     //main
     try{
-        //await deleteChannel(deleteEmail, token);
+        await deleteChannel(deleteEmail, token);
     }catch(err){
+        console.log(err)
         err.err !== undefined ? console.log(err.err) : null;
 
         result.message = err.message;
-        statusCode = err.statusCode;
+        statusCode = err.statusCode || 409;
     }
 
     //send result
