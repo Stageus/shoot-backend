@@ -679,7 +679,7 @@ const deleteReportAllByMatch = (loginUserAuthority = 0, group = 'channel', idx =
 
         try{
             if(group === 'post'){
-                const deleteResult = await esClient.deleteByQuery({
+                await esClient.deleteByQuery({
                     index : 'report',
                     body : {
                         query : {
