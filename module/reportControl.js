@@ -495,7 +495,38 @@ const getAllReportByMatch = (loginUserAuthority = 0, groupby, match, size = 20) 
                     scrollId : searchResult._scroll_id
                 });
             }else if(groupby === 'channel'){
+                const searchResult = await esClient.search({
+                    index : 'report',
+                    body : {
+                        query : {
+                            bool : {
+                                must : [
+                                    {
+                                        match : {
+                                            object : 'channel'
+                                        }
+                                    },
+                                    {
+                                        match : {
+                                            reported_channel_email : match
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    scroll : '3m',
+                    size : size
+                });   
 
+                resolve({
+                    report : searchResult.hits.hits.map(data => {
+                        return {
+                            ...data._source
+                        }
+                    }),
+                    scrollId : searchResult._scroll_id
+                });
             }else if(groupby === 'comment'){
 
             }else if(groupby === 'reply_comment'){
@@ -511,8 +542,27 @@ const getAllReportByMatch = (loginUserAuthority = 0, groupby, match, size = 20) 
     });
 }
 
+const getAllReportByScroll = (loginUserAuthority = 0, scorll = '') => {
+    return new Promise(async (resolve, reject) => {
+        const esClient = new elastic.Client({
+            node : 'http://localhost:9200'
+        });
+
+        try{
+
+        }catch(err){
+            reject({
+                statusCode : 409,
+                message : 'unexpected error occured',
+                err : err
+            });
+        }
+    });
+}
+
 module.exports = {
     addReport : addReport,
     getAllReport : getAllReport,
-    getAllReportByMatch : getAllReportByMatch
+    getAllReportByMatch : getAllReportByMatch,
+    getAllReportByScroll : getAllReportByScroll
 }
