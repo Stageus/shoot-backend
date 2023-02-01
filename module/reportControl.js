@@ -438,7 +438,81 @@ const getAllReport = (loginUserAuthority = 0, groupby, scroll = 0, size = 20) =>
     });
 }
 
+const getAllReportByMatch = (loginUserAuthority = 0, groupby, match, size = 20) => {
+    return new Promise(async (resolve, reject) => {
+        const esClient = new elastic.Client({
+            node : 'http://localhost:9200'
+        });
+
+        if(loginUserAuthority !== 1){
+            reject({
+                statusCode : 403,
+                message : 'no admin auth'
+            });
+            return;
+        }
+
+        if(!['channel','post','comment','reply-comment'].includes(groupby)){
+            reject({
+                statusCdoe : 400,
+                message : 'invalid report group'
+            });
+            return;
+        }
+        
+        try{
+            if(groupby === 'post'){
+                const searchResult = await esClient.search({
+                    index : 'report',
+                    body : {
+                        query : {
+                            bool : {
+                                must : [
+                                    {
+                                        match : {
+                                            object : 'post'
+                                        }
+                                    },
+                                    {
+                                        match : {
+                                            reported_post_idx : match   
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    scroll : '3m',
+                    size : size
+                });   
+
+                resolve({
+                    report : searchResult.hits.hits.map(data => {
+                        return {
+                            ...data._source
+                        }
+                    }),
+                    scrollId : searchResult._scroll_id
+                });
+            }else if(groupby === 'channel'){
+
+            }else if(groupby === 'comment'){
+
+            }else if(groupby === 'reply_comment'){
+                
+            }
+        }catch(err){
+            reject({
+                statusCode : 409,
+                message : 'unexpected error occured',
+                err : err
+            });
+        }
+    });
+}
+
 module.exports = {
     addReport : addReport,
-    getAllReport : getAllReport
+    getAllReport : getAllReport,
+    getAllReportByMatch : getAllReportByMatch
 }

@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const loginAuth = require('../middleware/loginAuth');
-const { addReport, getAllReport } = require('../module/reportControl');
+const { addReport, getAllReport, getAllReportByMatch } = require('../module/reportControl');
 
 router.get('/:groupby/all', loginAuth, async (req, res) => {
     //from FE
@@ -25,6 +25,33 @@ router.get('/:groupby/all', loginAuth, async (req, res) => {
         statusCode = err.statusCode || 409;
     }
 
+    //send result
+    res.status(statusCode).send(result);
+});
+
+router.get('/:groupby/:match', loginAuth, async (req, res) => {
+    //from FE
+    const loginUserAuthority = req.authority || 0;
+    const match = req.params.match || '';
+    const groupby = req.params.groupby || 'channel';
+
+    //to FE
+    const result = {};
+    let statusCode = 200;
+
+    //main
+    try{
+        const searchResult = await getAllReportByMatch(loginUserAuthority, groupby, match, 20);
+
+        result.data = searchResult.report;
+        result.scroll = searchResult.scroll;
+    }catch(err){
+        err.err ? console.log(err.err) : null;
+
+        result.message = err.message;
+        statusCode = err.statusCode || 409;
+    }
+    
     //send result
     res.status(statusCode).send(result);
 });
