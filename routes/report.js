@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const loginAuth = require('../middleware/loginAuth');
-const { addReport, getAllReport, getAllReportByMatch, getAllReportByScroll } = require('../module/reportControl');
+const { addReport, getAllReport, getAllReportByMatch, getAllReportByScroll, deleteReportAllByMatch } = require('../module/reportControl');
 
 router.get('/:groupby/all', loginAuth, async (req, res) => {
     //from FE
@@ -87,6 +87,30 @@ router.post('/', loginAuth, async (req, res) => {
     }catch(err){
         err.err ? console.log(err.err) : null;
         
+        result.message = err.message;
+        statusCode = err.statusCode || 409;
+    }
+
+    //send result
+    res.status(statusCode).send(result);
+});
+
+router.delete('/', loginAuth, async (req, res) => {
+    //from FE
+    const loginUserAuthority = req.authority || 0;
+    const group = req.query.group || 'channel';
+    const idx = req.query.idx || -1;
+
+    //to FE
+    const result = {};
+    let statusCode = 200;
+
+    //main
+    try{
+        await deleteReportAllByMatch(loginUserAuthority, group, idx);
+    }catch(err){
+        err.err ? console.log(err.err) : null;
+
         result.message = err.message;
         statusCode = err.statusCode || 409;
     }

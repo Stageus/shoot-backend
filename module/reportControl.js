@@ -451,14 +451,6 @@ const getAllReportByMatch = (loginUserAuthority = 0, groupby, match, size = 20) 
             });
             return;
         }
-
-        if(!['channel','post','comment','reply-comment'].includes(groupby)){
-            reject({
-                statusCdoe : 400,
-                message : 'invalid report group'
-            });
-            return;
-        }
         
         try{
             if(groupby === 'post'){
@@ -578,7 +570,7 @@ const getAllReportByMatch = (loginUserAuthority = 0, groupby, match, size = 20) 
                     }),
                     scrollId : searchResult._scroll_id
                 });
-            }else if(groupby === 'reply_comment'){
+            }else if(groupby === 'reply-comment'){
                 const searchResult = await esClient.search({
                     index : 'report',
                     body : {
@@ -592,7 +584,7 @@ const getAllReportByMatch = (loginUserAuthority = 0, groupby, match, size = 20) 
                                     },
                                     {
                                         match : {
-                                            reported_replyc_comment_idx : match
+                                            reported_reply_comment_idx : match
                                         }
                                     }
                                 ]
@@ -616,6 +608,11 @@ const getAllReportByMatch = (loginUserAuthority = 0, groupby, match, size = 20) 
                         }
                     }),
                     scrollId : searchResult._scroll_id
+                });
+            }else{
+                reject({
+                    statusCode : 400,
+                    message : 'invalid report group'
                 });
             }
         }catch(err){
@@ -667,9 +664,131 @@ const getAllReportByScroll = (loginUserAuthority = 0, scroll = '') => {
     });
 }
 
+const deleteReportAllByMatch = (loginUserAuthority = 0, group = 'channel', idx = -1) => {
+    return new Promise(async (resolve, reject) => {
+        const esClient = new elastic.Client({
+            node : 'http://localhost:9200'
+        });
+
+        if(loginUserAuthority !== 1){
+            reject({
+                statusCode : 403,
+                message : 'no admin auth'
+            })
+        }
+
+        try{
+            if(group === 'post'){
+                const deleteResult = await esClient.deleteByQuery({
+                    index : 'report',
+                    body : {
+                        query : {
+                            bool : {
+                                must : [
+                                    {
+                                        match : {
+                                            reported_post_idx : idx
+                                        }
+                                    },
+                                    {
+                                        match : {
+                                            object : 'post'
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                });
+            }else if(group === 'channel'){
+                await esClient.deleteByQuery({
+                    index : 'report',
+                    body : {
+                        query : {
+                            bool : {
+                                must : [
+                                    {
+                                        match : {
+                                            reported_channel_email : idx
+                                        }
+                                    },
+                                    {
+                                        match : {
+                                            object : 'channel'
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                });
+            }else if(group === 'comment'){
+                await esClient.deleteByQuery({
+                    index : 'report',
+                    body : {
+                        query : {
+                            bool : {
+                                must : [
+                                    {
+                                        match : {
+                                            reported_comment_idx : idx
+                                        }
+                                    },
+                                    {
+                                        match : {
+                                            object : 'comment'
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                });
+            }else if(group === 'reply-comment'){
+                await esClient.deleteByQuery({
+                    index : 'report',
+                    body : {
+                        query : {
+                            bool : {
+                                must : [
+                                    {
+                                        match : {
+                                            reported_reply_comment_idx : idx
+                                        }
+                                    },
+                                    {
+                                        match : {
+                                            object : 'reply_comment'
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                });
+            }else{
+                reject({
+                    statusCode : 400,
+                    message : 'invalid group'
+                });
+                return;
+            }
+
+            resolve(1);
+        }catch(err){
+            reject({
+                statusCode : 409,
+                message : 'unexpected error occured',
+                err : err
+            });
+        }
+    });
+}
+
 module.exports = {
     addReport : addReport,
     getAllReport : getAllReport,
     getAllReportByMatch : getAllReportByMatch,
-    getAllReportByScroll : getAllReportByScroll
+    getAllReportByScroll : getAllReportByScroll,
+    deleteReportAllByMatch : deleteReportAllByMatch
 }
