@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const loginAuth = require('../middleware/loginAuth');
-const { addReport, getAllReport, getAllReportByMatch } = require('../module/reportControl');
+const { addReport, getAllReport, getAllReportByMatch, getAllReportByScroll } = require('../module/reportControl');
 
 router.get('/:groupby/all', loginAuth, async (req, res) => {
     //from FE
@@ -29,7 +29,7 @@ router.get('/:groupby/all', loginAuth, async (req, res) => {
     res.status(statusCode).send(result);
 });
 
-router.get('/:groupby/:match', loginAuth, async (req, res) => {
+router.get('/:groupby/:match/all', loginAuth, async (req, res) => {
     //from FE
     const loginUserAuthority = req.authority || 0;
     const match = req.params.match || '';
@@ -43,12 +43,15 @@ router.get('/:groupby/:match', loginAuth, async (req, res) => {
     //main
     try{
         if(scroll){
+            const searchResult = await getAllReportByScroll(loginUserAuthority, scroll);
 
+            result.data = searchResult.report;
+            result.scroll = searchResult.scrollId;
         }else{
             const searchResult = await getAllReportByMatch(loginUserAuthority, groupby, match, 20);
 
             result.data = searchResult.report;
-            result.scroll = searchResult.scroll;
+            result.scroll = searchResult.scrollId;
         }
     }catch(err){
         err.err ? console.log(err.err) : null;

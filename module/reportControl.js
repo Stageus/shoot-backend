@@ -480,7 +480,12 @@ const getAllReportByMatch = (loginUserAuthority = 0, groupby, match, size = 20) 
                                     }
                                 ]
                             }
-                        }
+                        },
+                        sort : [
+                            {
+                                report_time : 'DESC'
+                            }
+                        ]
                     },
                     scroll : '3m',
                     size : size
@@ -489,6 +494,7 @@ const getAllReportByMatch = (loginUserAuthority = 0, groupby, match, size = 20) 
                 resolve({
                     report : searchResult.hits.hits.map(data => {
                         return {
+                            report_idx : data._id,
                             ...data._source
                         }
                     }),
@@ -513,24 +519,104 @@ const getAllReportByMatch = (loginUserAuthority = 0, groupby, match, size = 20) 
                                     }
                                 ]
                             }
-                        }
+                        },
+                        sort : [
+                            {
+                                report_time : 'DESC'
+                            }
+                        ]
                     },
                     scroll : '3m',
                     size : size
                 });   
-
+    
                 resolve({
                     report : searchResult.hits.hits.map(data => {
                         return {
+                            report_idx : data._id,
                             ...data._source
                         }
                     }),
                     scrollId : searchResult._scroll_id
                 });
             }else if(groupby === 'comment'){
-
+                const searchResult = await esClient.search({
+                    index : 'report',
+                    body : {
+                        query : {
+                            bool : {
+                                must : [
+                                    {
+                                        match : {
+                                            object : 'comment'
+                                        }
+                                    },
+                                    {
+                                        match : {
+                                            reported_comment_idx : match
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        sort : [
+                            {
+                                report_time : 'DESC'
+                            }
+                        ]
+                    },
+                    scroll : '3m',
+                    size : size
+                });   
+    
+                resolve({
+                    report : searchResult.hits.hits.map(data => {
+                        return {
+                            report_idx : data._id,
+                            ...data._source
+                        }
+                    }),
+                    scrollId : searchResult._scroll_id
+                });
             }else if(groupby === 'reply_comment'){
-                
+                const searchResult = await esClient.search({
+                    index : 'report',
+                    body : {
+                        query : {
+                            bool : {
+                                must : [
+                                    {
+                                        match : {
+                                            object : 'reply_comment'
+                                        }
+                                    },
+                                    {
+                                        match : {
+                                            reported_replyc_comment_idx : match
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        sort : [
+                            {
+                                report_time : 'DESC'
+                            }
+                        ]
+                    },
+                    scroll : '3m',
+                    size : size
+                });   
+    
+                resolve({
+                    report : searchResult.hits.hits.map(data => {
+                        return {
+                            report_idx : data._id,
+                            ...data._source
+                        }
+                    }),
+                    scrollId : searchResult._scroll_id
+                });
             }
         }catch(err){
             reject({
@@ -542,14 +628,35 @@ const getAllReportByMatch = (loginUserAuthority = 0, groupby, match, size = 20) 
     });
 }
 
-const getAllReportByScroll = (loginUserAuthority = 0, scorll = '') => {
+const getAllReportByScroll = (loginUserAuthority = 0, scroll = '') => {
     return new Promise(async (resolve, reject) => {
         const esClient = new elastic.Client({
             node : 'http://localhost:9200'
         });
 
-        try{
+        if(loginUserAuthority !== 1){
+            reject({
+                statusCode : 403,
+                message : 'no admin auth'
+            });
+            return;
+        }
 
+        try{
+            const searchResult = await esClient.scroll({
+                scroll_id : scroll,
+                scroll : '3m'
+            });
+
+            resolve({
+                report : searchResult.hits.hits.map(data => {
+                    return {
+                        report_idx : data._id,
+                        ...data._source
+                    }
+                }),
+                scrollId : searchResult._scroll_id
+            });
         }catch(err){
             reject({
                 statusCode : 409,
