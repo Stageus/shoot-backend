@@ -1,6 +1,33 @@
 const router = require('express').Router();
 const loginAuth = require('../middleware/loginAuth');
-const { addReport } = require('../module/reportControl');
+const { addReport, getAllReport } = require('../module/reportControl');
+
+router.get('/:groupby/all', loginAuth, async (req, res) => {
+    //from FE
+    const loginUserAuthority = req.authority || 0;
+    const scrollId = req.query.scroll;
+    const groupby = req.params.groupby || 'channel';
+
+    //to FE
+    const result = {};
+    let statusCode = 200;
+
+    //main
+    try{    
+        const getReportResult = await getAllReport(loginUserAuthority, groupby, scrollId, 100);
+            
+        result.data = getReportResult.report;
+        result.scroll = getReportResult.scrollId;
+    }catch(err){
+        err.err ? console.log(err.err) : null;
+
+        result.mesage = err.message;
+        statusCode = err.statusCode || 409;
+    }
+
+    //send result
+    res.status(statusCode).send(result);
+});
 
 router.post('/', loginAuth, async (req, res) => {
     //from FE
