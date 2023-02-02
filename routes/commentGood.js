@@ -1,10 +1,10 @@
 const router = require('express').Router();
 const loginAuth = require('../middleware/loginAuth');
-const { addBookmark, deleteBookmark } = require('../module/bookmarkControl');
+const { addCommentGood, deleteCommentGood } = require('../module/commentGoodControl');
 
-router.post('/', loginAuth, async (req, res) => {
+router.post('/:commentIdx', loginAuth, async (req, res) => {
     //from FE
-    const postIdx = req.query['post-idx'] || -1;
+    const commentIdx = req.params.commentIdx;
     const loginUserEmail = req.email;
 
     //to FE
@@ -13,22 +13,22 @@ router.post('/', loginAuth, async (req, res) => {
 
     //main
     try{
-        await addBookmark(postIdx, loginUserEmail);
+        await addCommentGood(commentIdx, loginUserEmail);
     }catch(err){
         err.err ? console.log(err.err) : null;
 
         result.message = err.message;
-        statusCode = err.statusCode || 409;
+        statusCode = err.statusCode;
     }
 
     //send result
     res.status(statusCode).send(result);
 });
 
-router.delete('/', loginAuth, async (req, res) => {
+router.delete('/:commentIdx', loginAuth, async (req, res) => {
     //from FE
-    const postIdx = req.query['post-idx'] || -1;
-    const loginUserEmail = req.email || '';
+    const commentIdx = req.params.commentIdx;
+    const loginUserEmail = req.email;
 
     //to FE
     const result = {};
@@ -36,12 +36,12 @@ router.delete('/', loginAuth, async (req, res) => {
 
     //main
     try{
-        await deleteBookmark(postIdx, loginUserEmail);
+        await deleteCommentGood(commentIdx, loginUserEmail);
     }catch(err){
         err.err ? console.log(err.err) : null;
 
         result.message = err.message;
-        statusCode = err.statusCode || 409;
+        statusCode = err.statusCode;
     }
 
     //send result

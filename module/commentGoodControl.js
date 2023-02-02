@@ -3,7 +3,7 @@ const { Client } = require('pg');
 const pgConfig = require('../config/psqlConfig');
 const { addNotification } = require('./notificationControl');
 
-const addPostGood = (postIdx = -1, loginUserEmail = '') => {
+const addCommentGood = (commentIdx = -1, loginUserEmail = '') => {
     return new Promise(async (resolve, reject) => {
         const pgClient = new Client(pgConfig);
         const esClient = new elastic.Client({
@@ -16,31 +16,30 @@ const addPostGood = (postIdx = -1, loginUserEmail = '') => {
             //BEGIN
             await pgClient.query('BEGIN');
 
-            //INSERT post good
-            const insertPostGoodSql = `INSERT INTO shoot.post_good (post_idx, email) VALUES ($1, $2)`;
-            await pgClient.query(insertPostGoodSql, [postIdx, loginUserEmail]);
+            //INSERT comment good
+            const insertCommentGoodSql = `INSERT INTO shoot.comment_good (comment_idx, email) VALUES ($1, $2)`;
+            await pgClient.query(insertCommentGoodSql, [commentIdx, loginUserEmail]);
 
-            //UPDATE post good count
-            const updatePostGoodSql = 'UPDATE shoot.post SET post_good_count = post_good_count + 1 WHERE post_idx = $1 RETURNING post_good_count, upload_channel_email';
-            const updatePostGoodResult = await pgClient.query(updatePostGoodSql, [postIdx]);
+            //UPDATE comment good count
+            const updateCommentGoodSql = 'UPDATE shoot.comment SET comment_good_count = comment_good_count + 1 WHERE comment_idx = $1 RETURNING comment_good_count, write_channel_email';
+            const updateCommentGoodResult = await pgClient.query(updateCommentGoodSql, [commentIdx]);
 
-            //update post good count on es
+            //update comment good count on es
             await esClient.update({
-                index : "post",
-                id : postIdx,
+                index : "comment",
+                id : commentIdx ,
                 body : {
                     doc : {
-                        post_good_count : updatePostGoodResult.rows[0].post_good_count,
+                        comment_good_count : updateCommentGoodResult.rows[0].comment_good_count,
                     }
                 }
             });
 
-            //add notification
-            if(loginUserEmail !== updatePostGoodResult.rows[0].upload_channel_email){
+            if(updateCommentGoodResult.rows[0].write_channel_email !== loginUserEmail){
                 addNotification(loginUserEmail, {
-                    type : 0,
-                    notifiedEmail : updatePostGoodResult.rows[0].upload_channel_email,
-                    idx : parseInt(postIdx)
+                    type : 2,
+                    notifiedEmail : updateCommentGoodResult.rows[0].write_channel_email,
+                    idx : parseInt(commentIdx)
                 });
             }
 
@@ -57,10 +56,10 @@ const addPostGood = (postIdx = -1, loginUserEmail = '') => {
                     message : 'already good'
                 });
                 return;
-            }else if(err.code == 23503){ //no post-idx error
+            }else if(err.code == 23503){ //no comment-idx error
                 reject({
                     statusCode : 404,
-                    message : 'cannot find post'
+                    message : 'cannot find comment'
                 });
                 return;
             }
@@ -74,7 +73,7 @@ const addPostGood = (postIdx = -1, loginUserEmail = '') => {
     });
 }
 
-const deletePostGood = (postIdx, loginUserEmail) => {
+const deleteCommentGood = (commentIdx, loginUserEmail) => {
     return new Promise(async (resolve, reject) => {
         const pgClient = new Client(pgConfig);
         const esClient = new elastic.Client({
@@ -87,27 +86,27 @@ const deletePostGood = (postIdx, loginUserEmail) => {
             //BEGIN
             await pgClient.query('BEGIN');
 
-            //INSERT post good
-            const deletePostGoodSql = `DELETE FROM shoot.post_good WHERE post_idx = $1 AND email = $2`;
-            const deletePostGoodResult = await pgClient.query(deletePostGoodSql, [postIdx, loginUserEmail]);
+            //INSERT comment good
+            const deleteCommentGoodSql = `DELETE FROM shoot.comment_good WHERE comment_idx = $1 AND email = $2`;
+            const deleteCommentGoodResult = await pgClient.query(deleteCommentGoodSql, [commentIdx, loginUserEmail]);
             
-            if(deletePostGoodResult.rowCount === 0){
+            if(deleteCommentGoodResult.rowCount === 0){
                 reject({
                     statusCode : 403,
-                    message : 'good data does not exist'
+                    message : 'do not have good record'
                 });
             }else{
-                //UPDATE post good count
-                const updatePostGoodSql = 'UPDATE shoot.post SET post_good_count = post_good_count - 1 WHERE post_idx = $1 RETURNING post_good_count';
-                const updatePostGoodResult = await pgClient.query(updatePostGoodSql, [postIdx]);
+                //UPDATE comment good count
+                const updateCommentGoodSql = 'UPDATE shoot.comment SET comment_good_count = comment_good_count - 1 WHERE comment_idx = $1 RETURNING comment_good_count';
+                const updateCommentGoodResult = await pgClient.query(updateCommentGoodSql, [commentIdx]);
 
-                //update post good count on es
+                //update comment good count on es
                 await esClient.update({
-                    index : "post",
-                    id : postIdx,
+                    index : "comment",
+                    id : commentIdx,
                     body : {
                         doc : {
-                            post_good_count : updatePostGoodResult.rows[0].post_good_count,
+                            comment_good_count : updateCommentGoodResult.rows[0].comment_good_count,
                         }
                     }
                 });
@@ -130,6 +129,6 @@ const deletePostGood = (postIdx, loginUserEmail) => {
 }
 
 module.exports = {
-    addPostGood : addPostGood,
-    deletePostGood : deletePostGood
+    addCommentGood : addCommentGood,
+    deleteCommentGood : deleteCommentGood
 }

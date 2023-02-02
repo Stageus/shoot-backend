@@ -1,18 +1,19 @@
 const router = require('express').Router();
-const { addSearchHistoryOff, deleteSearchHistoryOff, getSearchHistoryOffState } = require('../module/searchHistoryOffControl');
 const loginAuth = require('../middleware/loginAuth');
+const { addReplyCommentGood, deleteReplyCommentGood } = require('../module/replyCommentGoodControl');
 
-router.get('/', loginAuth, async (req, res) => {
+router.post('/:replyCommentIdx', loginAuth, async (req, res) => {
     //from FE
     const loginUserEmail = req.email || '';
+    const replyCommentIdx = req.params.replyCommentIdx || -1;
 
     //to FE
     const result = {};
     let statusCode = 200;
-    
+
     //main
     try{
-        result.data = await getSearchHistoryOffState(loginUserEmail);
+        await addReplyCommentGood(replyCommentIdx, loginUserEmail);
     }catch(err){
         err.err ? console.log(err.err) : null;
 
@@ -24,39 +25,18 @@ router.get('/', loginAuth, async (req, res) => {
     res.status(statusCode).send(result);
 });
 
-router.post('/', loginAuth, async (req, res) => {
+router.delete('/:replyCommentIdx', loginAuth, async (req, res) => {
     //from FE
-    const loginUserEmail = req.email || '';
-
-    //to FE
-    const result = {};
-    let statusCode = 200;
-    
-    //main
-    try{
-        await addSearchHistoryOff(loginUserEmail);
-    }catch(err){
-        err.err ? console.log(err.err) : null;
-
-        result.message = err.message;
-        statusCode = err.statusCode || 409;
-    }
-
-    //send result
-    res.status(statusCode).send(result);
-});
-
-router.delete('/', loginAuth, async (req, res) => {
-    //from FE
+    const replyCommentIdx = req.params.replyCommentIdx;
     const loginUserEmail = req.email;
 
     //to FE
     const result = {};
     let statusCode = 200;
-    
+
     //main
     try{
-        await deleteSearchHistoryOff(loginUserEmail);
+        await deleteReplyCommentGood(replyCommentIdx, loginUserEmail);
     }catch(err){
         err.err ? console.log(err.err) : null;
 

@@ -1,47 +1,26 @@
 const router = require('express').Router();
-const { addSearchHistoryOff, deleteSearchHistoryOff, getSearchHistoryOffState } = require('../module/searchHistoryOffControl');
 const loginAuth = require('../middleware/loginAuth');
-
-router.get('/', loginAuth, async (req, res) => {
-    //from FE
-    const loginUserEmail = req.email || '';
-
-    //to FE
-    const result = {};
-    let statusCode = 200;
-    
-    //main
-    try{
-        result.data = await getSearchHistoryOffState(loginUserEmail);
-    }catch(err){
-        err.err ? console.log(err.err) : null;
-
-        result.message = err.message;
-        statusCode = err.statusCode || 409;
-    }
-
-    //send result
-    res.status(statusCode).send(result);
-});
+const { addSubscribe, deleteSubscribe } = require('../module/subscribeControl');
 
 router.post('/', loginAuth, async (req, res) => {
     //from FE
     const loginUserEmail = req.email || '';
+    const subscribedChannelEmail = req.query['email'] || '';
 
     //to FE
     const result = {};
     let statusCode = 200;
-    
+
     //main
     try{
-        await addSearchHistoryOff(loginUserEmail);
+        await addSubscribe(loginUserEmail, subscribedChannelEmail);
     }catch(err){
         err.err ? console.log(err.err) : null;
 
         result.message = err.message;
-        statusCode = err.statusCode || 409;
+        statusCode = err.statusCode;
     }
-
+    
     //send result
     res.status(statusCode).send(result);
 });
@@ -49,14 +28,15 @@ router.post('/', loginAuth, async (req, res) => {
 router.delete('/', loginAuth, async (req, res) => {
     //from FE
     const loginUserEmail = req.email;
+    const subscribedChannelEmail = req.query['email'];
 
     //to FE
     const result = {};
     let statusCode = 200;
-    
+
     //main
     try{
-        await deleteSearchHistoryOff(loginUserEmail);
+        await deleteSubscribe(loginUserEmail, subscribedChannelEmail);
     }catch(err){
         err.err ? console.log(err.err) : null;
 
