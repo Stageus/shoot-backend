@@ -182,7 +182,6 @@ const getChannel = (channelEamil, loginUserEmail = '') => {
 
 const getAllChannel = (searchKeyword, scrollId = undefined, size = 30) => {
     return new Promise(async (resolve, reject) => {
-        //connect es
         const esClient = new elastic.Client({
             node : 'http://localhost:9200'
         })
@@ -254,6 +253,96 @@ const getAllChannel = (searchKeyword, scrollId = undefined, size = 30) => {
     })
 }
 
+const modifyChannel = (loginUserEmail, channelData) => {
+    return new Promise(async (resolve, reject) => {
+        AWS.config.update(awsConfig);
+        const s3 = new AWS.S3();
+        const pgClient = new Client(pgConfig);
+        const esClient = new elastic.Client({
+            node : 'http://localhost:9200'
+        });
+
+        const modifyChannelImg = channelData.channelImg || '';
+        const modifyChannelName = channelData.channelName || '';
+        const modifyDescription = channelData.description || '';
+        const modifyBirth = channelData.birth;
+        const modifySex = channelData.sex;
+
+        console.log(channelData);
+        try{
+            await pgClient.connect();
+
+            //BEGIN
+            await pgClient.query('BEGIN');
+
+            //SELECT profile img 
+            const selectChannelSql = 'SELECT profile_img FROM shoot.channel WHERE email = $1';
+            const selectChannelResult = await pgClient.query(selectChannelSql, [loginUserEmail]);
+
+            //UPDATE name,sex,birth,description
+            const updateObj = {};
+            if(modifyChannelImg.length === 0){
+                updateObj.sql = `UPDATE
+                                            shoot.channel
+                                        SET
+                                            name = $1,
+                                            sex = $2,
+                                            birth = $3,
+                                            description = $4
+                                        WHERE
+                                            email = $5
+                                        `;
+                updateObj.dataArray = [modifyChannelName, modifySex, modifyBirth, modifyDescription, loginUserEmail];
+            }else{
+                updateObj.sql = `UPDATE
+                                    shoot.channel
+                                SET
+                                    name = $1,
+                                    sex = $2,
+                                    birth = $3,
+                                    description = $4,
+                                    profile_img = $5
+                                WHERE
+                                    email = $6
+                                `;
+                updateObj.dataArray = [modifyChannelName, modifySex, modifyBirth, modifyDescription, modifyChannelImg, loginUserEmail];
+            }
+            await pgClient.query(updateObj.sql, updateObj.dataArray);
+            
+            //delete channel profile img on s3
+            if(selectChannelResult.rows[0].profile_img && modifyChannelImg){
+                await s3.deleteObject({
+                    Bucket: 'jochong/channel_img', 
+                    Key: selectChannelResult.rows[0].profile_img
+                }).promise();
+            }
+
+            //update es
+            await esClient.index({
+                index : 'channel',
+                id : loginUserEmail,
+                body : {
+                    name : modifyChannelName
+                }
+            });
+
+            //COMMIT
+            await pgClient.query('COMMIT');
+
+            resolve(1);
+        }catch(err){
+            //ROLLBACK
+            await pgClient.query('ROLLBACK');
+
+            reject({
+                statusCode : 409,
+                message : 'unexpected error occured',
+                err : err
+            });
+        }
+    });
+}
+
 const deleteChannel = (deleteEmail, token) => {
     return new Promise(async (resolve, reject) => {
         AWS.config.update(awsConfig);
@@ -301,7 +390,7 @@ const deleteChannel = (deleteEmail, token) => {
                     if(selectResult.rows[0].profile_img){
                         //delete channel profile img on s3
                         await s3.deleteObject({
-                            Bucket: 'jochong/channel', 
+                            Bucket: 'jochong/channel_img', 
                             Key: selectResult.rows[0].profile_img
                         }).promise();
                     }
@@ -372,5 +461,6 @@ module.exports = {
     addChannel : addChannel,
     getChannel : getChannel,
     getAllChannel : getAllChannel,
-    deleteChannel : deleteChannel
+    deleteChannel : deleteChannel,
+    modifyChannel : modifyChannel
 }
