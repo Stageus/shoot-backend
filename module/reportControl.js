@@ -10,7 +10,7 @@ const addReport = (loginUserEmail, reportInfo) => {
             node : 'http://localhost:9200'
         });
 
-        const reportContents = reportInfo.contents;
+        const reportContents = reportInfo.contents || '';
         const reportType = reportInfo.type || 0;
         const idxObject = reportInfo.object || 'channel';
         const idx = reportInfo.idx || -1;

@@ -5,6 +5,8 @@ const pgConfig = require('../config/psqlConfig');
 const channelDataValidCheck = require('./channelDataValidCheck');
 const passwordHash = require('./passwordHash');
 const verifyToken = require('../module/verifyToken');
+const AWS = require('aws-sdk');
+const awsConfig = require('../config/awsConfig');
 
 const addChannel = (channelData, loginType = 'local') => {
     return new Promise(async (resolve, reject) => {
@@ -254,6 +256,8 @@ const getAllChannel = (searchKeyword, scrollId = undefined, size = 30) => {
 
 const deleteChannel = (deleteEmail, token) => {
     return new Promise(async (resolve, reject) => {
+        AWS.config.update(awsConfig);
+        const s3 = new AWS.S3();
         const pgClient = new Client(pgConfig);
         const esClient = elastic.Client({
             node : "http://localhost:9200"
@@ -263,11 +267,12 @@ const deleteChannel = (deleteEmail, token) => {
 
         if(verify.state){
             const loginUserEmail = verify.email;
+            const loginUserAuthority = verify.authority;
             try{
                 await pgClient.connect();
 
                 //SELECT login user email and authority
-                const selectSql = 'SELECT email, authority FROM shoot.channel WHERE email = $1';
+                const selectSql = 'SELECT email, authority, profile_img FROM shoot.channel WHERE email = $1';
                 const selectResult = await pgClient.query(selectSql, [deleteEmail]);
 
                 //check email existence
@@ -279,15 +284,27 @@ const deleteChannel = (deleteEmail, token) => {
                     return;
                 }
 
+                //check delete channel authority
+                if(selectResult.rows[0].authority === 1){
+                    reject({
+                        message : 'cannot delete admin account',
+                        auth : 403
+                    });
+                    return;
+                }
+
                 //check authority
-                const loginUserAuthority = selectResult.rows[0].authority;
                 if(loginUserEmail === deleteEmail || loginUserAuthority === 1){
                     //BEGIN
                     await pgClient.query('BEGIN');
 
-                    //DELETE post
-                    const updatePostQuery = 'UPDATE shoot.post SET delete_time = $1 WHERE upload_channel_email = $2';
-                    await pgClient.query(updatePostQuery, [deleteEmail]);
+                    if(selectResult.rows[0].profile_img){
+                        //delete channel profile img on s3
+                        await s3.deleteObject({
+                            Bucket: 'jochong/channel', 
+                            Key: selectResult.rows[0].profile_img
+                        }).promise();
+                    }
 
                     //delete post on elasticsearch
                     await esClient.deleteByQuery({
@@ -301,27 +318,27 @@ const deleteChannel = (deleteEmail, token) => {
                         }
                     });
 
-                    //delete post on elasticsearch
+                    //delete comment on elasticsearch
                     await esClient.deleteByQuery({
-                        index : 'notification',
+                        index : 'comment',
                         body : {
                             query : {
                                 match : {
-                                    notified_email : deleteEmail
+                                    write_channel_email : deleteEmail
                                 }
                             }
                         }
                     });
-
-                    //DELETE channel
-                    const deleteChannelQuery = 'DELETE FROM shoot.channel WHERE email = $1';
-                    await pgClient.query(deleteChannelQuery, [deleteEmail]);
                     
                     //delete channel on elasticsearch
                     await esClient.delete({
                         index : 'channel',
                         id : deleteEmail
                     });
+
+                    //DELETE channel
+                    const deleteChannelQuery = 'DELETE FROM shoot.channel WHERE email = $1';
+                    await pgClient.query(deleteChannelQuery, [deleteEmail]);
 
                     //COMMIT
                     await pgClient.query('COMMIT');

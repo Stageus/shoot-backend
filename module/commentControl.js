@@ -211,7 +211,8 @@ const addComment = (contents = '', postIdx = '', loginUserEmail = '') => {
                     id : insertCommentResult.rows[0].comment_idx,
                     body : {
                         comment_good_count : 0,
-                        post_idx : postIdx
+                        post_idx : postIdx,
+                        write_channel_email : loginUserEmail
                     }
                 });
 

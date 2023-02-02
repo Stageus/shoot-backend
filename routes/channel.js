@@ -4,6 +4,7 @@ const { addChannel, getChannel, getAllChannel, deleteChannel } = require('../mod
 const { getSubscribeState } = require('../module/subscribeControl');
 const router = require('express').Router();
 const verifyToken = require('../module/verifyToken');
+const logoutAuth = require('../middleware/logoutAuth');
 const loginAuth = require('../middleware/loginAuth');
 
 router.get('/all', async (req, res) => {
@@ -31,7 +32,7 @@ router.get('/all', async (req, res) => {
 
     //send result
     res.status(statusCode).send(result);
-})
+});
 
 router.get('/:email', async (req, res) => {
     //from FE
@@ -62,9 +63,9 @@ router.get('/:email', async (req, res) => {
 
     //send result
     res.status(statusCode).send(result);
-})
+});
 
-router.post('/', loginAuth, channelImgUpload, async (req, res) => {
+router.post('/', logoutAuth, channelImgUpload, async (req, res) => {
     //from FE
     req.body.imgName = req?.file?.key;
     const loginType = req.body.loginType;
@@ -89,7 +90,7 @@ router.post('/', loginAuth, channelImgUpload, async (req, res) => {
 
     //send result
     res.status(statusCode).send(result);
-})
+});
 
 router.delete('/:channelEmail', loginAuth, async (req, res) => {
     //from FE
@@ -104,7 +105,6 @@ router.delete('/:channelEmail', loginAuth, async (req, res) => {
     try{
         await deleteChannel(deleteEmail, token);
     }catch(err){
-        console.log(err)
         err.err !== undefined ? console.log(err.err) : null;
 
         result.message = err.message;
@@ -113,6 +113,6 @@ router.delete('/:channelEmail', loginAuth, async (req, res) => {
 
     //send result
     res.status(statusCode).send(result);
-})
+});
 
 module.exports = router;
