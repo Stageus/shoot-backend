@@ -177,35 +177,27 @@ router.post('/number', async (req, res) => {
     }else{
         try{
             const pgClient = new Client(pgConfig);
+            
             await pgClient.connect();
+            await redis.connect();
     
-            const selectSql = 'select * from shoot.channel WHERE email = $1';
-            const selectData = await pgClient.query(selectSql, [email]);
-    
-            if(selectData.rows.length === 0){
-                const randomNumber = Math.floor(Math.random() * 1000000).toString().padStart(6, 0);
-                
-                await redis.connect();
-    
-                //check auth number already exists
-                const existState = await redis.exists(`${email}_auth_number`);
-                if(existState) await redis.del(`${email}_auth_number`);
+            const randomNumber = Math.floor(Math.random() * 1000000).toString().padStart(6, 0);
 
-                //check email already has authentication
-                const authState = await redis.exists(`certified_email_${email}`);
-                if(authState) await redis.del(`certified_email_${email}`);
-    
-                //set auth number on redis
-                await redis.set(`${email}_auth_number`, randomNumber);
-                await redis.expire(`${email}_auth_number`, 60 * 3); //3minutes
-    
-                await redis.disconnect();
+            //check auth number already exists
+            const existState = await redis.exists(`${email}_auth_number`);
+            if(existState) await redis.del(`${email}_auth_number`);
 
-                await sendEmail(email, randomNumber);
-            }else{
-                result.message = "this email already exists";
-                statusCode = 403;
-            }
+            //check email already has authentication
+            const authState = await redis.exists(`certified_email_${email}`);
+            if(authState) await redis.del(`certified_email_${email}`);
+
+            //set auth number on redis
+            await redis.set(`${email}_auth_number`, randomNumber);
+            await redis.expire(`${email}_auth_number`, 60 * 3); //3minutes
+
+            await redis.disconnect();
+
+            await sendEmail(email, randomNumber);
         }catch(err){
             console.log(err);
     

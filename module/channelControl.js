@@ -268,7 +268,6 @@ const modifyChannel = (loginUserEmail, channelData) => {
         const modifyBirth = channelData.birth;
         const modifySex = channelData.sex;
 
-        console.log(channelData);
         try{
             await pgClient.connect();
 
@@ -337,6 +336,67 @@ const modifyChannel = (loginUserEmail, channelData) => {
             reject({
                 statusCode : 409,
                 message : 'unexpected error occured',
+                err : err
+            });
+        }
+    });
+}
+
+const modifyPw = (loginUserEmail = '', pwData = {}) => {
+    return new Promise(async (resolve, reject) => {
+        const pgClient = new Client(pgConfig);
+
+        const modifyPw = pwData.pw;
+        const modifyPwCheck = pwData.pwCheck
+
+        //pw valid check
+        const pwExp = new RegExp('^(?=.*[a-zA-Z])(?=.*[0-9])(?=.*[!@#$%^&*])[a-zA-Z0-9!@#$%^&*]{8,16}$');
+        if(!pwExp.test(modifyPw)){
+            reject({
+                statusCode : 400,
+                message : "invalid password"
+            });
+            return;
+        }
+
+        //pwCheck valid check
+        if(modifyPw !== modifyPwCheck){
+            reject({
+                statusCode : 400,
+                message : "invalid password check"
+            });
+            return;
+        }
+
+        try{
+            await pgClient.connect();
+
+            await redis.connect();
+
+            const authState = await redis.exists(`certified_email_${loginUserEmail}`);
+
+            if(authState){
+                //UPDATE channel
+                const updateSql = 'UPDATE shoot.channel SET pw = $1 WHERE email = $2';
+                await pgClient.query(updateSql, [passwordHash(modifyPw), loginUserEmail]);
+
+                await redis.del(`certified_email_${loginUserEmail}`);
+
+                await redis.disconnect();
+
+                resolve(1);
+            }else{
+                await redis.disconnect();
+                
+                reject({
+                    statusCode : 403,
+                    message : 'no auth'
+                });
+            }
+        }catch(err){
+            reject({
+                statusCode : 409,
+                message : 'unexpected error occureed',
                 err : err
             });
         }
@@ -462,5 +522,6 @@ module.exports = {
     getChannel : getChannel,
     getAllChannel : getAllChannel,
     deleteChannel : deleteChannel,
-    modifyChannel : modifyChannel
+    modifyChannel : modifyChannel,
+    modifyPw : modifyPw
 }
