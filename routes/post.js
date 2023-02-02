@@ -1,8 +1,9 @@
 const router = require('express').Router();
-const { addPost, deletePost, getPostByPostIdx, getPostByScrollId, modifyPost, getPostByMatch, getPostBySearch, getHotPostAll } = require('../module/postControl');
+const { getBookmarkPostAll, addPost, deletePost, getPostByPostIdx, getPostByScrollId, modifyPost, getPostByMatch, getPostBySearch, getHotPostAll, getHistoryPostAll, getPostAll, getSubscribePostAll } = require('../module/postControl');
 const loginAuth = require('../middleware/loginAuth');
 const postFileUpload = require('../middleware/postFileUpload');
 const verifyToken = require('../module/verifyToken');
+const { addHistory } = require('../module/historyControl');
 
 router.get('/all', async (req, res) => {
     //from FE
@@ -28,7 +29,7 @@ router.get('/all', async (req, res) => {
         }else if(searchType){
             postData = await getPostBySearch(searchType, search, sortby, orderby);
         }else{
-            postData = await getPostAll(20);
+            postData = await getPostAll(sortby, orderby, 20);
         }
         result.data = postData.postArray;
         result.scroll = postData.scrollId;
@@ -36,16 +37,14 @@ router.get('/all', async (req, res) => {
         err.err ? console.log(err.err) : null;
 
         result.message = err.message;
-        statusCode = err.statusCode;
+        statusCode = err.statusCode || 409;
     }
 
     //send result
-    console.log(result);
     res.status(statusCode).send(result);
 });
 
 router.get('/hot/all', async (req, res) => {
-    console.log('hot/all');
     //to FE
     const result = {};
     let statusCode = 200;
@@ -55,15 +54,82 @@ router.get('/hot/all', async (req, res) => {
         const postData = await getHotPostAll();
         result.scroll = postData.scrollId;
         result.data = postData.postArray;
-        
     }catch(err){
         result.message = err.message;
-        statusCode = err.statusCode;
+        statusCode = err.statusCode || 409;
     }
 
     //send result
     res.status(statusCode).send(result);
-})
+});
+
+router.get('/history/all', loginAuth, async (req, res) => {
+    //from FE
+    const scroll = req.query['scroll'] || -1;
+    const loginUserEmail = req.email;
+
+    //to FE
+    const result = {};
+    let statusCode = 200;
+
+    //main
+    try{
+        result.data = await getHistoryPostAll(loginUserEmail, scroll, 20);
+    }catch(err){
+        result.message = err.message;
+        statusCode = err.statusCode || 409;
+    }
+
+    //send result
+    res.status(statusCode).send(result);
+});
+
+router.get('/subscribe/all', loginAuth, async (req, res) => {
+    //from FE
+    const loginUserEmail = req.email;
+    const groupby = req.query.groupby || 'post';
+    const scroll = req.query.scroll || -1;
+
+    //to FE
+    const result = {};
+    let statusCode = 200;
+
+    //main
+    try{
+        result.data = await getSubscribePostAll(loginUserEmail, groupby, scroll, 10);
+    }catch(err){
+        err.err ? console.log(err.err) : null;
+
+        result.message = err.message;
+        statusCode = err.statusCode || 409;
+    }
+
+    //send result
+    res.status(statusCode).send(result);
+});
+
+router.get('/bookmark/all', loginAuth, async (req, res) => {
+    //from FE
+    const loginUserEmail = req.email || '';
+    const scroll = req.query.scroll || -1;
+
+    //to FE
+    const result = {};
+    let statusCode = 200;
+
+    //main
+    try{
+        result.data = await getBookmarkPostAll(loginUserEmail, scroll, 2);
+    }catch(err){
+        err.err ? console.log(err.err) : null;
+
+        result.message = err.message;
+        statusCode = err.statusCode || 409;
+    }
+
+    //send result
+    res.status(statusCode).send(result);
+});
 
 router.get('/:postIdx', async (req, res) => {
     //from FE
@@ -78,11 +144,17 @@ router.get('/:postIdx', async (req, res) => {
     try{
         const postData = await getPostByPostIdx(postIdx, token);
         result.data = postData;
+
+        try{
+            await addHistory(postIdx, verifyToken(token).email);
+        }catch(err){
+            console.log(err);
+        }
     }catch(err){
         err.err ? console.log(err.err) : null
 
         result.message = err.message;
-        statusCode = statusCode;
+        statusCode = statusCode || 409;
     }
 
     //send result
@@ -106,7 +178,7 @@ router.post('/', loginAuth, postFileUpload, async (req, res) => {
         err.err !== undefined ? console.log(err.err) : null;
 
         result.message = err.message;
-        statusCode = err.statusCode;
+        statusCode = err.statusCode || 409;
     }
 
     //send result
@@ -130,7 +202,7 @@ router.put('/:postIdx', loginAuth, async (req, res) => {
         err.err ? console.log(err.err) : null;
 
         result.message = err.message;
-        statusCode = err.statusCode;
+        statusCode = err.statusCode || 409;
     }
 
     //send result
@@ -153,7 +225,7 @@ router.delete('/:postIdx', loginAuth, async (req, res) => {
         err.err ? console.log(err) : null;
 
         result.message = err.message;
-        statusCode = err.statusCode;
+        statusCode = err.statusCode || 409;
     }
 
     //send result

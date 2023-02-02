@@ -12,7 +12,6 @@ const bookmarkApi = require('./routes/bookmark');
 const categoryApi = require('./routes/category');
 const channelApi = require('./routes/channel');
 const commentApi = require('./routes/comment');
-const historyApi = require('./routes/history');
 const notificationApi = require('./routes/notification');
 const notificationOffApi = require('./routes/notificationOff');
 const notificationOnApi = require('./routes/notificationOn');
@@ -26,11 +25,15 @@ const searchHistoryOffApi = require('./routes/searchHistoryOff');
 const logApi = require('./routes/log');
 const blockChannelApi = require('./routes/blockChannel');
 const postGoodApi = require('./routes/postGood');
+const commentGoodApi = require('./routes/commentGood');
+const replyCommentGoodApi = require('./routes/replyCommentGood');
+const subscribeApi = require('./routes/subscribe');
 
 // config ===========================================================
 const { httpPort, httpsPort } = require('./config/portConfig');
 const { publicPath } = require('./config/pathConfig');
 const sessionOption = require('./config/sessionConfig');
+const loggingSetting = require('./middleware/loggingSetting');
 
 // setting ==========================================================
 let redisClient = createClient({ legacyMode: true });
@@ -43,6 +46,7 @@ app.use(cookieParser());
 app.use(session(sessionOption));
 app.use(passport.initialize());
 app.use(passport.session());
+app.use(loggingSetting());
 
 // routes ===========================================================
 app.use('/post', postApi);
@@ -51,7 +55,6 @@ app.use('/channel', channelApi);
 app.use('/vote', voteApi);
 app.use('/comment', commentApi);
 app.use('/reply-comment', replyCommentApi);
-app.use('/history', historyApi);
 app.use('/bookmark', bookmarkApi);
 app.use('/notification', notificationApi);
 app.use('/notification-on', notificationOnApi);
@@ -64,12 +67,15 @@ app.use('/search-history-off', searchHistoryOffApi);
 app.use('/log', logApi);
 app.use('/block-channel', blockChannelApi);
 app.use('/post-good', postGoodApi);
+app.use('/comment-good', commentGoodApi);
+app.use('/reply-comment-good', replyCommentGoodApi);
+app.use('/subscribe', subscribeApi);
 
 // api ==============================================================
 app.get('*', (req, res) => {
     res.sendFile(path.join(publicPath, 'index.html')); 
 });
 
-app.listen(httpPort, () => {
+app.listen(httpPort, '0.0.0.0', () => {
     console.log(`server on port : ${httpPort}`);
 });

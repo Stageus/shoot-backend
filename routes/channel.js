@@ -1,9 +1,10 @@
 const channelImgUpload = require('../middleware/channelImgUpload');
 const blockCheck = require('../module/blockCheck');
-const { addChannel, getChannel, getAllChannel, deleteChannel } = require('../module/channelControl');
+const { addChannel, getChannel, getAllChannel, deleteChannel, modifyChannel, modifyPw } = require('../module/channelControl');
 const { getSubscribeState } = require('../module/subscribeControl');
 const router = require('express').Router();
 const verifyToken = require('../module/verifyToken');
+const logoutAuth = require('../middleware/logoutAuth');
 const loginAuth = require('../middleware/loginAuth');
 
 router.get('/all', async (req, res) => {
@@ -31,7 +32,7 @@ router.get('/all', async (req, res) => {
 
     //send result
     res.status(statusCode).send(result);
-})
+});
 
 router.get('/:email', async (req, res) => {
     //from FE
@@ -51,26 +52,20 @@ router.get('/:email', async (req, res) => {
             result.message = 'blocked channel';
             statusCode = 404;
         }else{
-            result.data = await getChannel(email);
-
-            //get subscribe state
-            const verify = verifyToken(token);
-            const myEmail = verify.email;
-            if(verify.state && email !== myEmail){
-                const subscribeData = await getSubscribeState(myEmail, email);
-                result.data.subscribe_state = subscribeData.state;
-            }
+            result.data = await getChannel(email, verifyToken(token).email);
         }
     }catch(err){
+        err.err ? console.log(err) : null;
+
         result.message = err.message;
-        statusCode = err.statusCode;
+        statusCode = err.statusCode || 409;
     }
 
     //send result
     res.status(statusCode).send(result);
-})
+});
 
-router.post('/', loginAuth, channelImgUpload, async (req, res) => {
+router.post('/', logoutAuth, channelImgUpload, async (req, res) => {
     //from FE
     req.body.imgName = req?.file?.key;
     const loginType = req.body.loginType;
@@ -95,7 +90,53 @@ router.post('/', loginAuth, channelImgUpload, async (req, res) => {
 
     //send result
     res.status(statusCode).send(result);
-})
+});
+
+router.put('/', loginAuth, channelImgUpload, async (req, res) => {
+    //from FE
+    const modifyData = req.body || {};
+    const loginUserEmail = req.email || '';
+    req.body.channelImg = req?.file?.key;
+
+    //to FE
+    const result = {};
+    let statusCode = 200;
+
+    //main
+    try{    
+        await modifyChannel(loginUserEmail, modifyData);
+    }catch(err){
+        err.err ? console.log(err.err) : null;
+
+        result.message = err.message;
+        statusCode = err.statusCode || 409;
+    }
+
+    //send result
+    res.status(statusCode).send(result);
+});
+
+router.put('/pw', loginAuth, async (req, res) => {
+    //from FE
+    const loginUserEmail = req.email || '';
+    
+    //to FE
+    const result = {};
+    let statusCode = 200;
+
+    //main
+    try{
+        await modifyPw(loginUserEmail, req.body);
+    }catch(err){
+        err.err ? console.log(err.err) : null;
+
+        result.message = err.message;
+        statusCode = err.statusCode || 409;
+    }
+
+    //send result
+    res.status(statusCode).send(result);
+});
 
 router.delete('/:channelEmail', loginAuth, async (req, res) => {
     //from FE
@@ -108,16 +149,16 @@ router.delete('/:channelEmail', loginAuth, async (req, res) => {
     
     //main
     try{
-        //await deleteChannel(deleteEmail, token);
+        await deleteChannel(deleteEmail, token);
     }catch(err){
         err.err !== undefined ? console.log(err.err) : null;
 
         result.message = err.message;
-        statusCode = err.statusCode;
+        statusCode = err.statusCode || 409;
     }
 
     //send result
     res.status(statusCode).send(result);
-})
+});
 
 module.exports = router;
