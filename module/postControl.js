@@ -1094,7 +1094,7 @@ const addPost = (postData) => {
                 insertPostSql = 'INSERT INTO shoot.post (post_title, post_type, post_video, upload_channel_email, post_description, post_thumbnail, category_idx) VALUES ( $1, $2, $3, $4, $5, $6, $7) RETURNING post_idx, post_upload_time';
                 insertPostDataArray = [postData.title, postData.postType, postData.video, postData.email, postData.description, postData.thumbnail, postData.categoryIdx];
             }else{
-                insertPostSql = 'INSERT INTO shoot.post (post_titleb, post_type, post_video, upload_channel_email, post_description, category_idx) VALUES ( $1, $2, $3, $4, $5, $6) RETURNING post_idx, post_upload_time';
+                insertPostSql = 'INSERT INTO shoot.post (post_title, post_type, post_video, upload_channel_email, post_description, category_idx) VALUES ( $1, $2, $3, $4, $5, $6) RETURNING post_idx, post_upload_time';
                 insertPostDataArray = [postData.title, postData.postType, postData.video, postData.email, postData.description, postData.categoryIdx];
             }
             const insertPostResult = await pgClient.query(insertPostSql, insertPostDataArray);
@@ -1196,6 +1196,7 @@ const modifyPost = (postIdx, postData, token) => {
                 //check token
                 const verify = verifyToken(token);
                 const loginUserEmail = verify.email;
+
                 if(loginUserEmail){
                     await pgClient.connect();
 
@@ -1216,7 +1217,6 @@ const modifyPost = (postIdx, postData, token) => {
                     const selectChannelResult = await pgClient.query(selectChannelSql, [loginUserEmail]);
                     const { authority } = selectChannelResult.rows[0];
 
-                    console.log(selectChannelResult.rows);
                     //auth check
                     if(upload_channel_email === loginUserEmail || authority == 1){
                         //BEGIN

@@ -28,6 +28,7 @@ const postGoodApi = require('./routes/postGood');
 const commentGoodApi = require('./routes/commentGood');
 const replyCommentGoodApi = require('./routes/replyCommentGood');
 const subscribeApi = require('./routes/subscribe');
+const topHashtagApi = require('./routes/topHashtag');
 
 // config ===========================================================
 const { httpPort, httpsPort } = require('./config/portConfig');
@@ -70,6 +71,7 @@ app.use('/post-good', postGoodApi);
 app.use('/comment-good', commentGoodApi);
 app.use('/reply-comment-good', replyCommentGoodApi);
 app.use('/subscribe', subscribeApi);
+app.use('/top-hashtag', topHashtagApi);
 
 // api ==============================================================
 app.get('*', (req, res) => {

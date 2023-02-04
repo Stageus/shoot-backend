@@ -24,7 +24,7 @@ const addLog = (req, res, result) => {
                     status_code : res.statusCode, // status code
                     result : JSON.stringify(result || {}) // result obj
                 }
-            })
+            });
         }catch(err){ 
             console.log(err);
         }
@@ -198,7 +198,7 @@ const getLogByLogId = (loginUserAuthority = 0, logId = '') => {
             resolve({
                 id : searchResult._id,
                 ...searchResult._source
-            })
+            });
         }catch(err){
             if(err.status === 404){
                 reject({
