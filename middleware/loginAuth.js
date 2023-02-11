@@ -4,6 +4,8 @@ module.exports = (req, res, next) => {
     //from FE
     const token = req.cookies?.token;
 
+    console.log(token);
+
     //main
     const verify = verifyToken(token);
 

@@ -20,6 +20,7 @@ router.get('/all', async (req, res) => {
         statusCode = err.statusCode || 409;
     }
 
+    //send result
     res.status(statusCode).send(result);
 });
 

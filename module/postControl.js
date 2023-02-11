@@ -14,7 +14,6 @@ const getPostAll = (sortby = 'date', orderby = 'desc', size = 20) => {
             node : 'http://localhost:9200'
         });
 
-        //prepare sort object for searching elastcisearch
         const sortObj = {};
         if(sortby === 'good'){
             sortObj['post_good_count'] = orderby;

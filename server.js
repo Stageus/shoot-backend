@@ -6,6 +6,9 @@ const RedisStore = require('connect-redis')(session);
 const { createClient } = require("redis");
 const passport = require('passport');
 const cookieParser = require('cookie-parser');
+const cors = require('cors');
+const https = require('https');
+const fs = require('fs');
 
 const authApi = require('./routes/auth');
 const bookmarkApi = require('./routes/bookmark');
@@ -40,14 +43,24 @@ const loggingSetting = require('./middleware/loggingSetting');
 let redisClient = createClient({ legacyMode: true });
 redisClient.connect().catch(console.error);
 sessionOption.store = new RedisStore({ client: redisClient });
+const options = { 
+    ca: fs.readFileSync('/etc/letsencrypt/live/api.xn--0t4b.site/fullchain.pem'),
+    key: fs.readFileSync('/etc/letsencrypt/live/api.xn--0t4b.site/privkey.pem'),
+    cert: fs.readFileSync('/etc/letsencrypt/live/api.xn--0t4b.site/cert.pem')
+};
 
 // middleware =======================================================
+app.use(cors({
+    origin : ['https://xn--0t4b.site', 'http://localhost:3000'],
+    credentials : true
+}));
 app.use(express.json());
 app.use(cookieParser());
 app.use(session(sessionOption));
 app.use(passport.initialize());
 app.use(passport.session());
 app.use(loggingSetting());
+app.use(express.static(path.join(__dirname, 'public')));
 
 // routes ===========================================================
 app.use('/post', postApi);
@@ -75,9 +88,9 @@ app.use('/top-hashtag', topHashtagApi);
 
 // api ==============================================================
 app.get('*', (req, res) => {
-    res.sendFile(path.join(publicPath, 'index.html')); 
+    res.sendFile(path.join(publicPath, 'index.html'));
 });
 
-app.listen(httpPort, '0.0.0.0', () => {
-    console.log(`server on port : ${httpPort}`);
+https.createServer(options, app).listen(httpsPort, () => {
+    console.log(`server on port : ${httpsPort}`);
 });

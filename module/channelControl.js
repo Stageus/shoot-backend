@@ -11,6 +11,10 @@ const awsConfig = require('../config/awsConfig');
 const addChannel = (channelData, loginType = 'local') => {
     return new Promise(async (resolve, reject) => {
         const { email, pw, birth, sex, channelName, imgName } = channelData;
+        const pgClient = new Client(pgConfig);
+        const esClient = elastic.Client({
+            node : "http://localhost:9200"
+        });
 
         if(!channelDataValidCheck(channelData).state){
             return reject({
@@ -18,11 +22,6 @@ const addChannel = (channelData, loginType = 'local') => {
                 message : 'invalid channel data'
             })
         }
-
-        const pgClient = new Client(pgConfig);
-        const esClient = elastic.Client({
-            node : "http://localhost:9200"
-        });
 
         try{
             //connect psql

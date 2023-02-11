@@ -18,7 +18,7 @@ module.exports = (channelData) => {
             if(!/^(19[0-9][0-9]|20\d{2})-(0[0-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])$/.test(birth)) return { state : false, message : "invalid birth"};
 
             //sex valid check
-            if(sex !== 1 && sex !== 2) return { state : false, message : "invalid sex code"};
+            if(!(sex == 1 || sex == 2)) return { state : false, message : "invalid sex code"};
 
             //chennal name valid check
             const channelNameExp = new RegExp('^(?=.*[a-z0-9가-힣])[a-z0-9가-힣]{2,32}$');
@@ -29,8 +29,6 @@ module.exports = (channelData) => {
             if(!channelNameExp.test(channelName)) return { state : false, message : "invalid channel name"};
 
             //sex valid check
-            console.log(sex);
-            console.log(sex == 1);
             if(!(sex == 1 || sex == 2)) return { state : false, message : "invalid sex code"};
 
             //channel description valid check

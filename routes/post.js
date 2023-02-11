@@ -24,6 +24,7 @@ router.get('/all', async (req, res) => {
         let postData = {};
         if(scrollId){
             postData = await getPostByScrollId(scrollId);
+            console.log(postData);
         }else if(matchType){
             postData = await getPostByMatch(matchType, match, sortby, orderby);
         }else if(searchType){
