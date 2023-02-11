@@ -262,7 +262,7 @@ const getPostByScrollId = (scrollId = '') => {
                 err : err
             });
         }
-    })
+    });
 }
 
 const getPostByMatch = (matchType, match = '', sortby = 'date', orderby = 'desc', size = 20) => {

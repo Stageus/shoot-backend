@@ -161,7 +161,7 @@ router.get('/number/:email', async (req, res) => {
     res.status(statusCode).send(result);
 });
 
-router.post('/number', async (req, res) => {
+router.post('/number/email', async (req, res) => {
     //from FE
     const email = req.body.email;
     

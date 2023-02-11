@@ -27,6 +27,7 @@ const postFileUpload = multer({
         contentType : multerS3.AUTO_CONTENT_TYPE,
     }),
     fileFilter : (req, file, cb)=>{
+        console.log(req.files.video);
         if(!req.files.video){
             cb(new Error('video is required'));
         }else{
@@ -53,11 +54,11 @@ const postFileUpload = multer({
         }
     },
     limits : {
-        fileSize: 50 * 1024 * 1024, // how ?
+        fileSize: 50 * 1024 * 1024, //
     }
 });
 
-module.exports = async (req, res, next) => {
+module.exports = (req, res, next) => {
     postFileUpload.fields([
         {
             name : 'video',
@@ -77,7 +78,12 @@ module.exports = async (req, res, next) => {
             res.status(400).send({
                 message : err.message
             });
+        }else if(!req?.files?.video){
+            res.status(400).send({
+                message : 'video is required'
+            });
         }else{
+            console.log('넘어ㅗㅁ');
             next();
         }
     })

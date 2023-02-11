@@ -61,7 +61,7 @@ app.use(session(sessionOption));
 app.use(passport.initialize());
 app.use(passport.session());
 app.use(loggingSetting());
-app.use(rateLimit);
+//app.use(rateLimit);
 
 // routes ===========================================================
 app.use('/post', postApi);

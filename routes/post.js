@@ -4,6 +4,7 @@ const loginAuth = require('../middleware/loginAuth');
 const postFileUpload = require('../middleware/postFileUpload');
 const verifyToken = require('../module/verifyToken');
 const { addHistory } = require('../module/historyControl');
+const postCoolDown = require('../middleware/postCoolDown');
 
 router.get('/all', async (req, res) => {
     //from FE
@@ -162,7 +163,7 @@ router.get('/:postIdx', async (req, res) => {
     res.status(statusCode).send(result);
 });
 
-router.post('/', loginAuth, postFileUpload, async (req, res) => {
+router.post('/', loginAuth, postFileUpload, postCoolDown, async (req, res) => {
     //from FE
     req.body.video = req.files?.video?.[0]?.key;
     req.body.thumbnail = req.files?.thumbnail?.[0]?.key;
