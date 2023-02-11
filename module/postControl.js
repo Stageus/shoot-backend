@@ -940,67 +940,6 @@ const getSubscribePostAll = (loginUserEmail = '', groupby = 'post', scroll = -1,
                 err : err
             });
         }
-
-        const a = [
-            {
-                id : 'asd123',
-                posts : [
-                    {
-                        author : 'asd123',
-                        title : 'asdf'
-                    },
-                    {
-                        author : 'asd123',
-                        title : 'asdf'
-                    },
-                    {
-                        author : 'asd123',
-                        title : 'asdf'
-                    },
-                    {
-                        author : 'asd123',
-                        title : 'asdf'
-                    },
-                    {
-                        author : 'asd123',
-                        title : 'asdf'
-                    },
-                    {
-                        author : 'asd123',
-                        title : 'asdf'
-                    },
-                ]
-            },
-            {
-                id : 'asd123',
-                posts : [
-                    {
-                        author : 'asd123',
-                        title : 'asdf'
-                    },
-                    {
-                        author : 'asd123',
-                        title : 'asdf'
-                    },
-                    {
-                        author : 'asd123',
-                        title : 'asdf'
-                    },
-                    {
-                        author : 'asd123',
-                        title : 'asdf'
-                    },
-                    {
-                        author : 'asd123',
-                        title : 'asdf'
-                    },
-                    {
-                        author : 'asd123',
-                        title : 'asdf'
-                    },
-                ]
-            }
-        ]
     });
 }
 
