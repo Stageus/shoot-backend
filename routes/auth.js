@@ -20,7 +20,6 @@ router.get('/', loginAuth, (req, res) => {
 router.post('/local', logoutAuth, (req, res, next) => {
     //from FE
     const { email, pw } = req.body;
-    console.log(email, pw);
 
     //to FE
     const result = {};

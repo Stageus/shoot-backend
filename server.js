@@ -9,6 +9,7 @@ const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const https = require('https');
 const fs = require('fs');
+const rateLimit = require('./middleware/rateLimit');
 
 const authApi = require('./routes/auth');
 const bookmarkApi = require('./routes/bookmark');
@@ -60,7 +61,7 @@ app.use(session(sessionOption));
 app.use(passport.initialize());
 app.use(passport.session());
 app.use(loggingSetting());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(rateLimit);
 
 // routes ===========================================================
 app.use('/post', postApi);
