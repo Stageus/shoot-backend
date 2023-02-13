@@ -27,7 +27,6 @@ const postFileUpload = multer({
         contentType : multerS3.AUTO_CONTENT_TYPE,
     }),
     fileFilter : (req, file, cb)=>{
-        console.log(req.files.video);
         if(!req.files.video){
             cb(new Error('video is required'));
         }else{
@@ -72,8 +71,6 @@ module.exports = (req, res, next) => {
         if (err instanceof multer.MulterError) {
             console.log(err);
         }else if(err){
-            console.log(err);
-
             //send result
             res.status(400).send({
                 message : err.message
@@ -83,7 +80,6 @@ module.exports = (req, res, next) => {
                 message : 'video is required'
             });
         }else{
-            console.log('넘어ㅗㅁ');
             next();
         }
     })
