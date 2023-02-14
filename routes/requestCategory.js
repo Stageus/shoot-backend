@@ -27,7 +27,7 @@ router.get('/all', loginAuth, async (req, res) => {
 router.post('/', loginAuth, async (req, res) => {
     //from FE
     const loginUserEmail = req.email;
-    const requestCategoryName = req.body.category;
+    const requestCategoryName = req.body?.category?.trim() || '';
 
     //to FE
     const result = {};

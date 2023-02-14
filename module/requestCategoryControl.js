@@ -35,7 +35,7 @@ const getAllRequestCategory = (loginUserAuthority = 0) => {
 const addRequestCategory = (requestCategoryName = '', loginUserEmail = '') => {
     return new Promise(async (resolve, reject) => {
         const pgClient = new Client(pgConfig);
-
+        
         try{
             if(categoryDataValidCheck(requestCategoryName)){
                 await pgClient.connect();
