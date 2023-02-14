@@ -57,11 +57,11 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
+app.use(loggingSetting());
+app.use(rateLimit);
 app.use(session(sessionOption));
 app.use(passport.initialize());
 app.use(passport.session());
-app.use(loggingSetting());
-//app.use(rateLimit);
 
 // routes ===========================================================
 app.use('/post', postApi);

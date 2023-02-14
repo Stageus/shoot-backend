@@ -6,11 +6,19 @@ const getAllRequestCategory = (loginUserAuthority = 0) => {
     return new Promise(async (resolve, reject) => {
         const pgClient = new Client(pgConfig);
 
+        if(loginUserAuthority != 1){
+            reject({
+                statusCode : 403,
+                message : 'no admin auth'
+            });
+            return;
+        }
+
         try{
             await pgClient.connect();
 
             //SELECT
-            const selectReqCategorySql = 'SELECT COUNT(*), request_category_name, MAX(recent_request_time) AS recent_request_time FROM shoot.request_category GROUP BY request_category_name';
+            const selectReqCategorySql = 'SELECT COUNT(*) AS request_count, request_category_name, MAX(recent_request_time) AS recent_request_time FROM shoot.request_category GROUP BY request_category_name ORDER BY COUNT(request_category_name) DESC';
             const selectReqCategoryResult = await pgClient.query(selectReqCategorySql);
 
             resolve(selectReqCategoryResult.rows);

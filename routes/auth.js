@@ -8,6 +8,7 @@ const logoutAuth = require('../middleware/logoutAuth');
 const loginAuth = require('../middleware/loginAuth');
 const createToken = require('../module/createToken');
 const { getChannel } = require('../module/channelControl');
+const cookieConfig = require('../config/cookieConfig');
 
 router.get('/', loginAuth, (req, res) => {
     //from FE
@@ -50,7 +51,7 @@ router.post('/local', logoutAuth, (req, res, next) => {
                 const token = createToken({ email : email, authority : channelData.authority }, expiresIn);
     
                 //cookie
-                res.cookie('token', token);
+                res.cookie('token', token, cookieConfig);
             }
     
             //send result
@@ -65,11 +66,11 @@ router.get('/google/callback', (req, res) => {
     passport.authenticate('google', async (err, email, info) => {
         if(err){
             if(err.statusCode === 409){ //unexpected error
-                res.cookie('statusCode', 409);
+                res.cookie('statusCode', 409, cookieConfig);
             }else if(err.statusCode === 403){ //blocked email
-                res.cookie('statusCode', 403);
-                res.cookie('blockEndTime', err.blockEndTime);
-                res.cookie('blockReason', err.blockReason);
+                res.cookie('statusCode', 403, cookieConfig);
+                res.cookie('blockEndTime', err.blockEndTime, cookieConfig);
+                res.cookie('blockReason', err.blockReason, cookieConfig);
             }
 
             res.redirect('/login');
@@ -81,14 +82,14 @@ router.get('/google/callback', (req, res) => {
     
             await redis.disconnect();
 
-            res.cookie('statusCode', 200);
-            res.cookie('loginType', 'google');
-            res.cookie('email', email);
+            res.cookie('statusCode', 200, cookieConfig);
+            res.cookie('loginType', 'google', cookieConfig);
+            res.cookie('email', email, cookieConfig);
 
             res.redirect('/signup');
         }else{ //login success
             const token = createToken(email);
-            res.cookie('token', token);
+            res.cookie('token', token, cookieConfig);
 
             res.redirect('/');
         }
