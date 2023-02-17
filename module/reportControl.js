@@ -37,6 +37,8 @@ const addReport = (loginUserEmail, reportInfo) => {
             if(idxObject === 'post'){
                 const selectPostSql = 'SELECT upload_channel_email, post_title, post_upload_time, shoot.channel.name FROM shoot.post JOIN shoot.channel ON shoot.post.upload_channel_email = shoot.channel.email WHERE post_idx = $1';
                 const selectPostResult = await pgClient.query(selectPostSql, [idx]);
+
+                await pgClient.end();
                 
                 if(selectPostResult.rows.length !== 0){
                     await esClient.index({
@@ -57,7 +59,6 @@ const addReport = (loginUserEmail, reportInfo) => {
                         }
                     });
 
-                    console.log(`${channelHash(loginUserEmail)}-${idxObject}-${idx}`);
                     resolve(1);
                 }else{
                     reject({
@@ -68,6 +69,8 @@ const addReport = (loginUserEmail, reportInfo) => {
             }else if(idxObject === 'channel'){
                 const selectChannelSql = 'SELECT email, creation_time, name FROM shoot.channel WHERE email = $1';
                 const selectChannelResult = await pgClient.query(selectChannelSql, [idx]);
+
+                await pgClient.end();
                 
                 if(selectChannelResult.rows.length !== 0){
                     await esClient.index({
@@ -96,6 +99,8 @@ const addReport = (loginUserEmail, reportInfo) => {
             }else if(idxObject === 'comment'){
                 const selectCommentSql = 'SELECT shoot.comment.write_channel_email, shoot.comment.post_idx, shoot.comment.comment_contents, shoot.channel.name, shoot.comment.comment_time FROM shoot.comment JOIN shoot.channel ON shoot.comment.write_channel_email = shoot.channel.email WHERE comment_idx = $1';
                 const selectCommentResult = await pgClient.query(selectCommentSql, [idx]);
+
+                await pgClient.end();
                 
                 if(selectCommentResult.rows.length !== 0){
                     await esClient.index({
@@ -146,6 +151,8 @@ const addReport = (loginUserEmail, reportInfo) => {
                                                 WHERE 
                                                     shoot.reply_comment.reply_comment_idx = $1`;
                 const selectReplyCommentResult = await pgClient.query(selectReplyCommentSql, [idx]);
+
+                await pgClient.end();
                 
                 if(selectReplyCommentResult.rows.length !== 0){
                     await esClient.index({
@@ -183,6 +190,10 @@ const addReport = (loginUserEmail, reportInfo) => {
                 });
             }
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+
             reject({
                 statusCode : 409,
                 message : 'unexpected error occured',

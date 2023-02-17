@@ -6,9 +6,10 @@ router.get('/all', loginAuth, async (req, res) => {
     //from FE
     const loginUserAuthority = req.authority || 0;
     const scrollId = req.query.scroll;
+
     const searchOption = {
-        email : req.query.email = '',
-        path : req.query.path,
+        email : req.query.email || '',
+        path : req.query.path || '',
         orderby : req.query.orderby === 'asc' ? 'asc' : 'desc',
         displayLog : req.query.log === 'true' ? true : false
     }

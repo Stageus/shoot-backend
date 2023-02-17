@@ -8,8 +8,6 @@ const getAllReplyComment = (commentIdx,loginUserEmail = '', scroll = 2147483647,
     return new Promise(async (resolve, reject) => {
         const pgClient =  new Client(pgConfig);
 
-        console.log(commentIdx, loginUserEmail, scroll, size);
-
         try{
             await pgClient.connect();
 
@@ -55,8 +53,14 @@ const getAllReplyComment = (commentIdx,loginUserEmail = '', scroll = 2147483647,
                                     `;
             const selectCommentResult = await pgClient.query(selectCommentSql, [commentIdx, loginUserEmail, scroll]);
 
+            await pgClient.end();
+
             resolve(selectCommentResult.rows);
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+
             reject({
                 statusCode : 409,
                 message : 'unexpected error occured',
@@ -104,9 +108,14 @@ const addReplyComment = (contents, commentIdx, loginUserEmail) => {
             //COMMIT
             await pgClient.query('COMMIT');
 
+            await pgClient.end();
+
             resolve();
         }catch(err){
-            await pgClient.query('ROLLBACK');
+            if(pgClient._connected){
+                await pgClient.query('ROLLBACK');
+                await pgClient.end();
+            }
 
             if(err.code == 23503){
                 reject({
@@ -166,8 +175,13 @@ const modifyReplyComment = (contents, replyCommentIdx, loginUserEmail, loginUser
                     message : 'cannot find reply comment'
                 });
             }
+
+            await pgClient.end();
         }catch(err){
-            await pgClient.query('ROLLBACK');
+            if(pgClient._connected){
+                await pgClient.query('ROLLBACK');
+                await pgClient.end();
+            }
 
             reject({
                 statusCode : 409,
@@ -203,9 +217,13 @@ const deleteReplyCommnet = (replyCommentIdx, loginUserEmail, loginUserAuthority 
                     //COMMIT
                     await pgClient.query('COMMIT');
 
+                    await pgClient.end();
+
                     resolve(1);
                 }else{
                     await pgClient.query('ROLLBACK');
+
+                    await pgClient.end();
 
                     reject({
                         statusCode : 404,
@@ -227,9 +245,14 @@ const deleteReplyCommnet = (replyCommentIdx, loginUserEmail, loginUserAuthority 
 
                         //COMMIT
                         await pgClient.query('COMMIT');
+
+                        await pgClient.end();
+
                         resolve(1);
                     }else{
                         await pgClient.query('ROLLBACK');
+
+                        await pgClient.end();
                         
                         reject({
                             statusCode : 403,
@@ -238,6 +261,8 @@ const deleteReplyCommnet = (replyCommentIdx, loginUserEmail, loginUserAuthority 
                     }
                 }else{
                     await pgClient.query('ROLLBACK');
+                    
+                    await pgClient.end();
 
                     reject({
                         statusCode : 404,
@@ -246,7 +271,10 @@ const deleteReplyCommnet = (replyCommentIdx, loginUserEmail, loginUserAuthority 
                 }
             }
         }catch(err){
-            await pgClient.query('ROLLBACK');
+            if(pgClient._connected){
+                await pgClient.query('ROLLBACK');
+                await pgClient.end();
+            }
 
             reject({
                 statusCode : 409,

@@ -44,8 +44,14 @@ const addBlockChannel = (loginUserAuthority = 0, blockEmail = '', blockPeriod = 
             const insertBlockSql = 'INSERT INTO shoot.block_channel (block_channel_email, block_reason, block_period) VALUES ($1, $2, $3)';
             await pgClient.query(insertBlockSql, [blockEmail, blockReason, blockPeriod]);
 
+            await pgClient.end();
+
             resolve(1);
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+            
             reject({
                 statusCode : 409,
                 message : 'unexpected error occured',

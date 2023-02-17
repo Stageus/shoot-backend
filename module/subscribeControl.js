@@ -30,6 +30,8 @@ const addSubscribe = (loginUserEmail = '', subscribedChannelEmail = '') => {
             //COMMIT
             await pgClient.query('COMMIT');
 
+            await pgClient.end();
+
             addNotification(loginUserEmail, {
                 type : 5,
                 notifiedEmail : subscribedChannelEmail,
@@ -37,8 +39,10 @@ const addSubscribe = (loginUserEmail = '', subscribedChannelEmail = '') => {
 
             resolve(1);
         }catch(err){
-            //ROLLBACK
-            await pgClient.query('ROLLBACK');
+            if(pgClient._connected){
+                await pgClient.query('ROLLBACK');
+                await pgClient.end();
+            }
 
             if(err.code == 23505){
                 reject({
@@ -82,10 +86,14 @@ const deleteSubscribe = (loginUserEmail, subscribedChannelEmail) => {
                 //COMMIT
                 await pgClient.query('COMMIT');
 
+                await pgClient.end();
+
                 resolve(1);
             }else{
                 //ROLLBACK
                 await pgClient.query('ROLLBACK');
+
+                await pgClient.end();
 
                 reject({
                     statusCode : 403,
@@ -93,8 +101,10 @@ const deleteSubscribe = (loginUserEmail, subscribedChannelEmail) => {
                 });
             }
         }catch(err){
-            //ROLLBACK
-            await pgClient.query('ROLLBACK');
+            if(pgClient._connected){
+                await pgClient.query('ROLLBACK');
+                await pgClient.end();
+            }
             
             reject({
                 statusCode : 409,

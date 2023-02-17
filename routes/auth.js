@@ -199,7 +199,12 @@ router.post('/number/email', async (req, res) => {
             await redis.disconnect();
 
             await sendEmail(email, randomNumber);
+
+            await pgClient.end();
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
             console.log(err);
     
             result.message = "unexpected error occured";

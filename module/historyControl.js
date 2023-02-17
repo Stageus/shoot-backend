@@ -36,7 +36,13 @@ const addHistory = (postIdx, loginUserEmail = '') => {
                     message : 'no login'
                 });
             }
+
+            await pgClient.end();
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+
             if(err.code == 23503){ 
                 reject({
                     statusCode : 404,

@@ -11,6 +11,8 @@ const getSearchHistoryOffState = (loginUserEmail = '') => {
             //SELECT
             const selectHistoryOffSql = 'SELECT * FROM shoot.search_history_off WHERE channel_email = $1';
             const selectHistoryOffResult = await pgClient.query(selectHistoryOffSql, [loginUserEmail]);
+            
+            await pgClient.end();
 
             if(selectHistoryOffResult.rows.length === 0){
                 resolve({ state : true });
@@ -18,6 +20,10 @@ const getSearchHistoryOffState = (loginUserEmail = '') => {
                 resolve({ state : false });
             }
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+
             reject({
                 statusCode : 409,
                 message : 'unexpected error occured',
@@ -38,8 +44,14 @@ const addSearchHistoryOff = (loginUserEmail = '') => {
             const insertHistoryOffSql = 'INSERT INTO shoot.search_history_off (channel_email) VALUES ($1)';
             await pgClient.query(insertHistoryOffSql, [loginUserEmail]);
 
+            await pgClient.end();
+
             resolve(1);
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+            
             if(err.code == 23505){
                 reject({
                     statusCode : 403,
@@ -67,6 +79,8 @@ const deleteSearchHistoryOff = (loginUserEmail = '') => {
             const deleteSearchHistoryOffSql = 'DELETE FROM shoot.search_history_off WHERE channel_email = $1';
             const deleteSearchHistoryOffResult = await pgClient.query(deleteSearchHistoryOffSql, [loginUserEmail]);
 
+            await pgClient.end();
+
             if(deleteSearchHistoryOffResult.rowCount !== 0){
                 resolve(1);
             }else{
@@ -76,6 +90,10 @@ const deleteSearchHistoryOff = (loginUserEmail = '') => {
                 });
             }
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+
             reject({
                 statusCode : 409,
                 message : 'unexpected error occured',

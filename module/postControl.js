@@ -31,7 +31,7 @@ const getPostAll = (sortby = 'date', orderby = 'desc', size = 20) => {
                     sort : [sortObj]
                 },
                 size : size,
-                scroll : '3m'
+                scroll : '2m'
             });
 
             //SELECT post
@@ -69,11 +69,17 @@ const getPostAll = (sortby = 'date', orderby = 'desc', size = 20) => {
                 postArray.push(selectPostResult.rows[0]);
             }
 
+            await pgClient.end();
+
             resolve({
                 postArray : postArray,
                 scrollId : searchResult._scroll_id
             });
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+            
             reject({
                 statusCode : 409,
                 message : 'unexpected error occured',
@@ -192,7 +198,13 @@ const getPostByPostIdx = (postIdx, token = "") => {
                     statusCode : 404
                 })
             }
+            
+            await pgClient.end();
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+
             reject({
                 message : 'unexpected error occured',
                 statusCode : 409,
@@ -213,7 +225,7 @@ const getPostByScrollId = (scrollId = '') => {
             await pgClient.connect();
 
             const searchResult = await esClient.scroll({
-                scroll : '3m',
+                scroll : '2m',
                 scroll_id : scrollId
             });
 
@@ -251,11 +263,17 @@ const getPostByScrollId = (scrollId = '') => {
                 postArray.push(selectPostResult.rows[0]);
             }
 
+            await pgClient.end();
+
             resolve({
                 postArray : postArray,
                 scrollId : searchResult._scroll_id
             });
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+
             reject({
                 statusCode : 409,
                 message : 'unexpected error occured',
@@ -267,6 +285,11 @@ const getPostByScrollId = (scrollId = '') => {
 
 const getPostByMatch = (matchType, match = '', sortby = 'date', orderby = 'desc', size = 20) => {
     return new Promise(async (resolve, reject) => {
+        const pgClient = new Client(pgConfig);
+        const esClient = new elastic.Client({
+            node : 'http://localhost:9200'
+        });
+
         //check sortby
         if(!(sortby === 'date' || sortby === 'good')){
             reject({
@@ -292,11 +315,6 @@ const getPostByMatch = (matchType, match = '', sortby = 'date', orderby = 'desc'
                 message : 'invalid match keyword'
             });
         }
-
-        const pgClient = new Client(pgConfig);
-        const esClient = new elastic.Client({
-            node : 'http://localhost:9200'
-        });
         
         try{
             await pgClient.connect();
@@ -334,7 +352,7 @@ const getPostByMatch = (matchType, match = '', sortby = 'date', orderby = 'desc'
                             sort : [sortObj]
                         },
                         size : size,
-                        scroll : '3m',
+                        scroll : '2m',
                     });
                     
                     //SELECT post
@@ -401,7 +419,7 @@ const getPostByMatch = (matchType, match = '', sortby = 'date', orderby = 'desc'
                         sort : [sortObj]
                     },
                     size : size,
-                    scroll : '3m'
+                    scroll : '2m'
                 });
 
                 //SELECT post
@@ -462,7 +480,7 @@ const getPostByMatch = (matchType, match = '', sortby = 'date', orderby = 'desc'
                         sort : [sortObj]
                     },
                     size : size,
-                    scroll : '3m'
+                    scroll : '2m'
                 });
 
                 //SELECT post
@@ -510,7 +528,13 @@ const getPostByMatch = (matchType, match = '', sortby = 'date', orderby = 'desc'
                     message : 'invalid match type'
                 });
             }
+            
+            await pgClient.end();
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+
             reject({
                 statusCode : 409,
                 message : 'unexpected error occured',
@@ -522,6 +546,11 @@ const getPostByMatch = (matchType, match = '', sortby = 'date', orderby = 'desc'
 
 const getPostBySearch = (searchType, search = '', sortby = 'date', orderby = 'desc', size = 20) => {
     return new Promise(async (resolve, reject) => {
+        const pgClient = new Client(pgConfig);
+        const esClient = new elastic.Client({
+            node : 'http://localhost:9200'
+        });
+
         //check sortby
         if(!(sortby === 'date' || sortby === 'good')){
             reject({
@@ -547,11 +576,6 @@ const getPostBySearch = (searchType, search = '', sortby = 'date', orderby = 'de
                 message : 'invalid search keyword'
             });
         }
-
-        const pgClient = new Client(pgConfig);
-        const esClient = new elastic.Client({
-            node : 'http://localhost:9200'
-        });
         
         try{
             await pgClient.connect();
@@ -577,7 +601,7 @@ const getPostBySearch = (searchType, search = '', sortby = 'date', orderby = 'de
                         sort : [sortObj]
                     },
                     size : size,
-                    scroll : '3m'
+                    scroll : '2m'
                 });
 
                 //SELECT post
@@ -632,7 +656,7 @@ const getPostBySearch = (searchType, search = '', sortby = 'date', orderby = 'de
                         sort : [sortObj]
                     },
                     size : size,
-                    scroll : '3m'
+                    scroll : '2m'
                 });
 
                 //SELECT post
@@ -680,7 +704,13 @@ const getPostBySearch = (searchType, search = '', sortby = 'date', orderby = 'de
                     message : 'invalid match type'
                 });
             }
+
+            await pgClient.end();
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+
             reject({
                 statusCode : 409,
                 message : 'unexpected error occured',
@@ -713,7 +743,7 @@ const getHotPostAll = (size = 20, hot = 1) => {
                     },
                 },
                 size : size,
-                scroll : '3m'
+                scroll : '2m'
             });
 
             //SELECT post
@@ -751,11 +781,17 @@ const getHotPostAll = (size = 20, hot = 1) => {
                 postArray.push(selectPostResult.rows[0]);
             }
 
+            await pgClient.end();
+
             resolve({
                 postArray : postArray,
                 scrollId : searchResult._scroll_id
             });
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+
             reject({
                 statusCode : 409,
                 message : 'unexpected error occured',
@@ -815,8 +851,14 @@ const getBookmarkPostAll = (loginUserEmail = '', scroll = -1, size = 20) => {
                                     `;
             const getBookmarkResult = await pgClient.query(getBookmarkSql, scroll === -1 ? [loginUserEmail] : [loginUserEmail, scroll]);
 
+            await pgClient.end();
+
             resolve(getBookmarkResult.rows);
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+
             reject({
                 statusCode : 409,
                 message : 'unexpected error occured',
@@ -933,7 +975,13 @@ const getSubscribePostAll = (loginUserEmail = '', groupby = 'post', scroll = -1,
                     message : 'invalid groupby query'
                 }); 
             }
+
+            await pgClient.end();
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+
             reject({
                 statusCode : 409,
                 message : 'unexpected error occured',
@@ -992,8 +1040,14 @@ const getHistoryPostAll = (loginUserEmail = '', scroll = -1, size = 2) => {
                                         `
             const getHistoryResult = await pgClient.query(getHistorySql, scroll === -1 ? [loginUserEmail] : [loginUserEmail, scroll]);
 
+            await pgClient.end();
+
             resolve(getHistoryResult.rows);
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+
             reject({
                 statusCode : 409,
                 message : 'unexpected error occured',
@@ -1084,9 +1138,14 @@ const addPost = (postData) => {
             //COMMIT
             await pgClient.query('COMMIT');
 
+            await pgClient.end();
+
             resolve(1);
         }catch(err){
-            await pgClient.query('ROLLBACK');
+            if(pgClient._connected){
+                await pgClient.query('ROLLBACK');
+                await pgClient.end();
+            }
 
             reject({
                 statusCode : 409,
@@ -1099,6 +1158,11 @@ const addPost = (postData) => {
 
 const modifyPost = (postIdx, postData, token) => {
     return new Promise(async (resolve, reject) => {
+        const pgClient = new Client(pgConfig);
+        const esClient = new elastic.Client({
+            node : 'http://localhost:9200'
+        });
+
         const postType = postData.postType;
         postData.postType = undefined; //for validation check
 
@@ -1123,12 +1187,6 @@ const modifyPost = (postIdx, postData, token) => {
         //post data valid check
         const postDataValidation = postDataValidCheck(postData);
         if(postDataValidation.state){
-            const pgClient = new Client(pgConfig);
-
-            const esClient = new elastic.Client({
-                node : 'http://localhost:9200'
-            });
-
             //update try
             try{
                 //check token
@@ -1142,6 +1200,8 @@ const modifyPost = (postIdx, postData, token) => {
                     const selectPostSql = 'SELECT upload_channel_email FROM shoot.post WHERE post_idx = $1';
                     const selectPostResult = await pgClient.query(selectPostSql, [postIdx]);
                     if(!selectPostResult.rows[0]){
+                        await pgClient.end();
+
                         reject({
                             statusCode : 404,
                             message : 'cannot find post'
@@ -1244,18 +1304,24 @@ const modifyPost = (postIdx, postData, token) => {
                         reject({
                             statusCode : 403,
                             message : 'no auth'
-                        })
+                        });
                     }
+
+                    await pgClient.end();
                 }else{
                     reject({
                         statusCode : 401,
                         message : 'no login'
-                    })
+                    });
                 }
     
                 resolve(1);
             }catch(err){
-                await pgClient.query('ROLLBACK');
+                if(pgClient._connected){
+                    await pgClient.query('ROLLBACK');
+                    await pgClient.end();
+                }
+                
                 reject({
                     statusCode : 409,
                     message : 'unexpected error occured',
@@ -1273,15 +1339,14 @@ const modifyPost = (postIdx, postData, token) => {
 
 const deletePost = (postIdx, token) => {
     return new Promise(async (resolve, reject) => {
+        const pgClient = new Client(pgConfig);
+        const esClient = new elastic.Client({
+            node : 'http://localhost:9200'
+        });
+
         const verify = verifyToken(token);
         if(verify.state){
             const loginUserEmail = verify.email;
-
-            const esClient = new elastic.Client({
-                node : 'http://localhost:9200'
-            });
-    
-            const pgClient = new Client(pgConfig);
             
             try{
                 await pgClient.connect();
@@ -1295,10 +1360,12 @@ const deletePost = (postIdx, token) => {
                 const selectPostSql = 'SELECT upload_channel_email,post_type, post_video, post_thumbnail  FROM shoot.post WHERE post_idx = $1';
                 const selectResult = await pgClient.query(selectPostSql, [postIdx]);
                 if(!selectResult.rows[0]){
+                    await pgClient.end();
+
                     reject({
                         statusCode : 404,
                         message : 'cannot find post'
-                    })
+                    });
                     return;
                 }
                 const { upload_channel_email, post_video, post_thumbnail } = selectResult.rows[0];
@@ -1359,10 +1426,14 @@ const deletePost = (postIdx, token) => {
                     });
                 }
 
+                await pgClient.end();
+
                 resolve(1);
             }catch(err){
-                //ROLLBACK
-                await pgClient.query('ROLLBACK');
+                if(pgClient._connected){
+                    await pgClient.query('ROLLBACK');
+                    await pgClient.end();
+                }
 
                 reject({
                     statusCode : 409,

@@ -10,40 +10,49 @@ const awsConfig = require('../config/awsConfig');
 
 const addChannel = (channelData, loginType = 'local') => {
     return new Promise(async (resolve, reject) => {
-        const { email, pw, birth, sex, channelName, imgName } = channelData;
         const pgClient = new Client(pgConfig);
         const esClient = elastic.Client({
             node : "http://localhost:9200"
         });
 
+        const { email, pw, birth, sex, channelName, imgName } = channelData;
+
         if(!channelDataValidCheck(channelData).state){
-            return reject({
+            reject({
                 statusCode : 400,
                 message : 'invalid channel data'
-            })
+            });
+            return;
         }
 
         try{
             //connect psql
             await pgClient.connect();
+
+            //BEGIN
             await pgClient.query('BEGIN');
 
             //check email already exists
             const selectData = await pgClient.query('SELECT * FROM shoot.channel WHERE email = $1', [email]);
             if(selectData.rows.length >=  1){
+                await pgClient.end();
+
                 reject({
                     statusCode : 409,
                     message : 'this email already exists'
-                })
+                });
                 return;
             }
 
             if(loginType !== 'local'){
                 //check email auth
                 await redis.connect();
+
                 const authState = await redis.exists(`certified_email_${email}_${loginType}`);
                 if(!authState){
                     await redis.disconnect();
+                    await pgClient.end();
+
                     reject({
                         message : 'no email is being authenticated',
                         statusCode : 403
@@ -73,6 +82,7 @@ const addChannel = (channelData, loginType = 'local') => {
                 const esClient = elastic.Client({
                     node : "http://localhost:9200"
                 });
+
                 await esClient.index({
                     index : 'channel',
                     id : email,
@@ -87,6 +97,8 @@ const addChannel = (channelData, loginType = 'local') => {
                 const authState = await redis.exists(`certified_email_${email}`);
                 if(!authState){
                     await redis.disconnect();
+                    await pgClient.end();
+
                     reject({
                         message : 'no email is being authenticated',
                         statusCode : 403
@@ -123,12 +135,17 @@ const addChannel = (channelData, loginType = 'local') => {
             
             //COMMIT
             await pgClient.query('COMMIT');
+
+            await pgClient.end();
             
             resolve(1);
         }catch(err){
             console.log(err);
 
-            await pgClient.query('ROLLBACK');
+            if(pgClient._connected){
+                await pgClient.query('ROLLBACK');
+                await pgClient.end();
+            }
 
             if(redis.isOpen){
                 await redis.disconnect();
@@ -169,7 +186,13 @@ const getChannel = (channelEamil, loginUserEmail = '') => {
 
                 resolve(channelData);
             }
+            
+            await pgClient.end();
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+            
             reject({
                 message : 'unexpected error occured',
                 statusCode : 409,
@@ -222,7 +245,7 @@ const getAllChannel = (searchKeyword, scrollId = undefined, size = 30) => {
                 searchResult = await esClient.scroll({
                     scroll : '3m',
                     scroll_id : scrollId
-                })
+                });
             }
             
             resolve({
@@ -233,7 +256,7 @@ const getAllChannel = (searchKeyword, scrollId = undefined, size = 30) => {
                         name : hit._source.name
                     }
                 })
-            })
+            });
         }catch(err){
             const rejectObj = {
                 err : err
@@ -327,10 +350,14 @@ const modifyChannel = (loginUserEmail, channelData) => {
             //COMMIT
             await pgClient.query('COMMIT');
 
+            await pgClient.end();
+
             resolve(1);
         }catch(err){
-            //ROLLBACK
-            await pgClient.query('ROLLBACK');
+            if(pgClient._connected){
+                await pgClient.query('ROLLBACK');
+                await pgClient.end();
+            }
 
             reject({
                 statusCode : 409,
@@ -392,7 +419,13 @@ const modifyPw = (loginUserEmail = '', pwData = {}) => {
                     message : 'no auth'
                 });
             }
+
+            await pgClient.end();
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+
             reject({
                 statusCode : 409,
                 message : 'unexpected error occureed',
@@ -425,6 +458,8 @@ const deleteChannel = (deleteEmail, token) => {
 
                 //check email existence
                 if(selectResult.rows.length === 0){
+                    await pgClient.end();
+
                     reject({
                         message : 'cannot find channel',
                         statusCode : 404
@@ -434,6 +469,8 @@ const deleteChannel = (deleteEmail, token) => {
 
                 //check delete channel authority
                 if(selectResult.rows[0].authority === 1){
+                    await pgClient.end();
+
                     reject({
                         message : 'cannot delete admin account',
                         auth : 403
@@ -498,8 +535,13 @@ const deleteChannel = (deleteEmail, token) => {
                         statusCode : 403
                     })
                 }
+
+                await pgClient.end();
             }catch(err){
-                await pgClient.query('ROLLBACK');
+                if(pgClient._connected){
+                    await pgClient.query('ROLLBACK');
+                    await pgClient.end();
+                }
 
                 reject({
                     message : 'unexpected error occured',

@@ -19,15 +19,18 @@ passport.use(new LocalStrategy(
         passwordField : 'pw'
     },
     async (email, pw, done) => {
+        const pgClient = new Client(pgConfig);
+
         try{
             //connect psql
-            const pgClient = new Client(pgConfig);
             await pgClient.connect();
 
             //SELECT pw data
             const selectPwSql = 'SELECT * FROM shoot.channel WHERE email = $1';
             const selectPwData = [email];
             const selectPwResult = await pgClient.query(selectPwSql, selectPwData);
+
+            await pgClient.end();
 
             //check email existence
             if(selectPwResult.rows.length === 0){
@@ -56,6 +59,10 @@ passport.use(new LocalStrategy(
         }catch(err){
             console.log(err);
 
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+
             done({ message : 'unexpected error occured', statusCode : 409 });
         }
     }
@@ -80,6 +87,9 @@ passport.use(new GoogleStrategy(
             //SELECT email data
             const selectSql = 'SELECT email, login_type FROM shoot.channel WHERE email = $1';
             const selectChannelResult = await pgClient.query(selectSql, [email]);
+
+            await pgClient.end();
+
             if(selectChannelResult.rows.length !== 0){
                 if(selectChannelResult.rows[0].login_type !== 'google'){
                     done({
@@ -107,6 +117,10 @@ passport.use(new GoogleStrategy(
             }
         }catch(err){
             console.log(err);
+
+            if(pgClient._connected){
+                await pgClient.end();
+            }
 
             done({ message : 'unexpected error occured ', statusCode : 409 })
         }

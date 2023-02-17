@@ -45,10 +45,15 @@ const addCommentGood = (commentIdx = -1, loginUserEmail = '') => {
 
             //COMMIT
             await pgClient.query('COMMIT');
+
+            await pgClient.end();
             
             resolve(1);
         }catch(err){
-            await pgClient.query('ROLLBACK');
+            if(pgClient._connected){
+                await pgClient.query('ROLLBACK');
+                await pgClient.end();
+            }
 
             if(err.code == 23505){  //unique error
                 reject({
@@ -116,8 +121,13 @@ const deleteCommentGood = (commentIdx, loginUserEmail) => {
                 
                 resolve(1);
             }
+
+            await pgClient.end();
         }catch(err){
-            await pgClient.query('ROLLBACK');
+            if(pgClient._connected){
+                await pgClient.query('ROLLBACK');
+                await pgClient.end();
+            }
 
             reject({
                 statusCode : 409,

@@ -13,6 +13,8 @@ const getNotificationOn = (loginUserEmail, notiEmail) => {
             const selectSubscribeResult = await pgCleint.query(selectSubscribeSql, [loginUserEmail, notiEmail]);
             const subscribeData = selectSubscribeResult.rows[0];
 
+            await pgClient.end();
+
             if(subscribeData){
                 resolve({
                     state : subscribeData.notification
@@ -24,6 +26,10 @@ const getNotificationOn = (loginUserEmail, notiEmail) => {
                 });
             }
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+
             reject({
                 statusCode: 409,
                 message : 'unexpected error occured',
@@ -64,7 +70,13 @@ const addNotificationOn = (loginUserEmail, notiEmail) => {
                     message : 'cannot find subscribe data'
                 });
             }
+
+            await pgCleint.end();
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+            
             reject({
                 statusCode : 409,
                 message : 'unexpected error occured',
@@ -104,7 +116,13 @@ const deleteNotificationOn = (loginUserEmail, notiEmail) => {
                     message : 'cannot find subscribe data'
                 });   
             }
+
+            await pgCleint.end();
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+
             reject({
                 statusCode: 409,
                 message : 'unexpected error occured',

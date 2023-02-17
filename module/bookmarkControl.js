@@ -12,8 +12,14 @@ const addBookmark = (postIdx, loginUserEmail) => {
             const insertBookmarkSql = 'INSERT INTO shoot.bookmark (post_idx, email) VALUES ($1, $2)';
             await pgClient.query(insertBookmarkSql, [postIdx, loginUserEmail]);
 
+            await pgClient.end();
+
             resolve(1);
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+
             if(err.code == 23505){ //unique error
                 reject({
                     statusCode : 403,
@@ -47,6 +53,8 @@ const deleteBookmark = (postIdx = -1, loginUserEmail = '') => {
             const deleteBookmarkSql = 'DELETE FROM shoot.bookmark WHERE post_idx = $1 AND email = $2';
             const deleteBookmarkResult = await pgClient.query(deleteBookmarkSql, [postIdx, loginUserEmail]);
 
+            await pgClient.end();
+
             if(deleteBookmarkResult.rowCount !== 0){
                 resolve(1);
             }else{
@@ -56,6 +64,10 @@ const deleteBookmark = (postIdx = -1, loginUserEmail = '') => {
                 })
             }
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+            
             reject({
                 sttausCode : 409,
                 message : 'unexpected error occrued',

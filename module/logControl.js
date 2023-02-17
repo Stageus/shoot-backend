@@ -61,7 +61,7 @@ const getAllLog = (loginUserAuthority = 0, searchOption = {}, size = 20) => {
         }
         if(searchOption.path){
             mustArray.push({
-                match : {
+                wildcard : {
                     api_path : `*${searchOption.path}*`
                 }
             });
@@ -98,7 +98,7 @@ const getAllLog = (loginUserAuthority = 0, searchOption = {}, size = 20) => {
                     sort : [sortObj]
                 },
                 size : size,
-                scroll : '3m'
+                scroll : '2m'
             });
             
             resolve({
@@ -144,7 +144,7 @@ const getLogByScroll = (loginUserAuthority = 0, scrollId ='') => {
 
         try{
             const scrollResult = await esClient.scroll({
-                scroll : '3m',
+                scroll : '2m',
                 scroll_id : scrollId
             });
 

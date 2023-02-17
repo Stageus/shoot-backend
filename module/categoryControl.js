@@ -13,8 +13,14 @@ const getCategoryAll = (size = 5) => {
             const selectCategorySql = `SELECT category_idx, category_name, category_time FROM shoot.category ORDER BY category_idx ASC LIMIT ${size}`;
             const selectCategoryResult = await pgClient.query(selectCategorySql);
 
+            await pgClient.end();
+
             resolve(selectCategoryResult.rows);
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+
             reject({
                 statusCode : 409,
                 message : 'unexpected error occured',
@@ -45,7 +51,7 @@ const addCategory = (categoryName, loginUserAuthority = 0) => {
                 const selectCountSql = 'SELECT (SELECT COUNT(*) FROM shoot.category) < 5 AS count_state';
                 const selectCountResult = await pgClient.query(selectCountSql);
             
-                if(selectCountResult.rows.count_state){
+                if(selectCountResult.rows[0].count_state){
                     //INSERT
                     const insertCategorySql = 'INSERT INTO shoot.category (category_name) VALUES ($1)';
                     await pgClient.query(insertCategorySql, [categoryName]);
@@ -57,7 +63,13 @@ const addCategory = (categoryName, loginUserAuthority = 0) => {
                         message : 'cannot have more than 5 category'
                     });
                 }
+
+                await pgClient.end();
             }catch(err){
+                if(pgClient._connected){
+                    await pgClient.end();
+                }
+
                 if(err.code == 23505){
                     reject({
                         statusCode : 405,
@@ -107,7 +119,13 @@ const deleteCategory = (categoryIdx = -1, loginUserAuthority = 0) => {
                         message : 'cannot find category'
                     }); 
                 }
+                
+                await pgClient.end();
             }catch(err){
+                if(pgClient._connected){
+                    await pgClient.end();
+                }
+                
                 reject({
                     statusCode : 409,
                     message : 'unexpected error occured',

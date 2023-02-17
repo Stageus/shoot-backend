@@ -55,10 +55,10 @@ app.use(cors({
     origin : ['https://xn--0t4b.site', 'http://localhost:3000'],
     credentials : true
 }));
+app.use(rateLimit);
 app.use(express.json());
 app.use(cookieParser());
 app.use(loggingSetting());
-app.use(rateLimit);
 app.use(session(sessionOption));
 app.use(passport.initialize());
 app.use(passport.session());

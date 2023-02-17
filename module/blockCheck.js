@@ -3,18 +3,21 @@ const pgConfig = require('../config/psqlConfig');
 
 module.exports = (email) => {
     return new Promise(async (resolve, reject) => {
+        const pgClient = new Client(pgConfig);
+
         const result = {
             state : true
         }
 
         try{
             //connect
-            const pgClient = new Client(pgConfig);
             await pgClient.connect();
 
             //SELECT
             const selectBlockSql = 'SELECT block_start_time, block_reason, block_period FROM shoot.block_channel WHERE block_channel_email = $1 ORDER BY block_channel_idx DESC';
             const selectBlockResult = await pgClient.query(selectBlockSql, [email]);
+
+            await pgClient.end();
             
             if(selectBlockResult.rows.length !== 0){
                 const blockPeriod = selectBlockResult.rows[0].block_period;
@@ -32,9 +35,13 @@ module.exports = (email) => {
                 }
             }
 
-            resolve(result)
+            resolve(result);
         }catch(err){
             console.log(err);
+
+            if(pgClient._connected){
+                await pgClient.end();
+            }
 
             reject({
                 message : err.message,

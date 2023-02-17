@@ -32,8 +32,14 @@ const getAllTopHashtag = (categoryIdx) => {
                                         `;
             const selectHashtagResult = await pgClient.query(selectHashtagSql, [categoryIdx]);
 
+            await pgClient.end();
+
             resolve(selectHashtagResult.rows);
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+
             reject({
                 message : 'unexpected error occured',
                 statusCode : 409,

@@ -34,8 +34,14 @@ const addSearchHistory = (searchKeyword = '', loginUserEmail = '') => {
                     await pgClient.query(insertHistorySql, [searchKeyword, loginUserEmail]);
                 }
 
+                await pgClient.end();
+
                 resolve(1);
             }catch(err){
+                if(pgClient._connected){
+                    await pgClient.end();
+                }
+
                 reject({
                     statusCode : 409,
                     message : 'unexpected error occured',
@@ -62,8 +68,14 @@ const getAllSearchHistory = (loginUserEmail = '', size = 5) => {
             const selectSearchHistorySql = 'SELECT search_keyword_idx, search_keyword AS keyword FROM shoot.search_history WHERE channel_email = $1 ORDER BY search_keyword_idx DESC';
             const selectSearchHistoryResult = await pgClient.query(selectSearchHistorySql, [loginUserEmail]);
 
+            await pgClient.end();
+
             resolve(selectSearchHistoryResult.rows);
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+
             reject({
                 statusCode: 409,
                 message : 'unexpected error occured',
@@ -92,10 +104,14 @@ const deleteSearchHistory = (searchHistoryIdx, loginUserEmail) => {
                     //COMMIT
                     await pgClient.query('COMMIT');
 
+                    await pgClient.end();
+
                     resolve(1);
                 }else{
                     //ROLLBACK
                     await pgClient.query('ROLLBACK');
+
+                    await pgClient.end();
 
                     reject({
                         statusCode : 403,
@@ -109,8 +125,11 @@ const deleteSearchHistory = (searchHistoryIdx, loginUserEmail) => {
                 });
             }
         }catch(err){
-            //ROLLBACK
-            await pgClient.query('ROLLBACK');
+            if(pgClient._connected){
+                await pgClient.query('ROLLBACK');
+                await pgClient.end();
+            }
+
             reject({
                 statusCode : 409,
                 message : 'unexpected error occured',

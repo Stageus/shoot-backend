@@ -19,7 +19,7 @@ const getNotificationOffState = (loginUserEmail, type = 'post', idx = -1) => {
                 const selectNotificationOffSql = 'SELECT type, idx, email FROM shoot.notification_off WHERE email = $1 AND type = $2 AND idx = $3';
                 const selectNotificationOffResult = await pgClient.query(selectNotificationOffSql, [loginUserEmail, typeCode[type], idx]);
 
-                console.log(selectNotificationOffResult.rows[0]);
+                await pgClient.end();
 
                 if(selectNotificationOffResult.rows[0]){
                     resolve(selectNotificationOffResult.rows[0]);
@@ -33,6 +33,10 @@ const getNotificationOffState = (loginUserEmail, type = 'post', idx = -1) => {
                 });    
             }
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+
             reject({
                 statusCode : 409,
                 message : 'unexpected error occured',
@@ -61,8 +65,6 @@ const addNotificationOff = (loginUserEmail = '', type = 'post', idx = -1) => {
                 const selectResult = await pgClient.query(selectSql, [idx]);
                 const selectData = selectResult.rows[0];
 
-                console.log(selectData.upload_channel_email);
-
                 if(selectData?.upload_channel_email === loginUserEmail || selectData?.write_channel_email === loginUserEmail){
                     //INSERT notification off
                     const insertNotiOffSql = 'INSERT INTO shoot.notification_off (type, idx, email) VALUES ($1, $2, $3)';
@@ -75,6 +77,8 @@ const addNotificationOff = (loginUserEmail = '', type = 'post', idx = -1) => {
                         message : `cannot find ${type}`
                     });  
                 }
+
+                await pgClient.end();
             }else{
                 reject({
                     statusCode : 400,
@@ -82,6 +86,10 @@ const addNotificationOff = (loginUserEmail = '', type = 'post', idx = -1) => {
                 });
             }
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+
             if(err.code == 23505){
                 reject({
                     statusCode : 403,
@@ -130,7 +138,13 @@ const deleteNotificationOff = (loginUserEmail, type, idx) => {
                     message : 'invalid type'
                 });
             }
+
+            await pgClient.end();
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+
             reject({
                 statusCode : 409,
                 message : 'unexpected error occured',

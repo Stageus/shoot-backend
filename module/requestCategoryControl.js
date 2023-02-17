@@ -21,8 +21,14 @@ const getAllRequestCategory = (loginUserAuthority = 0) => {
             const selectReqCategorySql = 'SELECT COUNT(*) AS request_count, request_category_name, MAX(recent_request_time) AS recent_request_time FROM shoot.request_category GROUP BY request_category_name ORDER BY COUNT(request_category_name) DESC';
             const selectReqCategoryResult = await pgClient.query(selectReqCategorySql);
 
+            await pgClient.end();
+
             resolve(selectReqCategoryResult.rows);
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+
             reject({
                 statusCode : 409,
                 message : 'unexpected error occured',
@@ -49,8 +55,12 @@ const addRequestCategory = (requestCategoryName = '', loginUserEmail = '') => {
                     const insertReqCategorySql = 'INSERT INTO shoot.request_category (request_category_name, request_channel_email) VALUES ($1, $2)';
                     await pgClient.query(insertReqCategorySql, [requestCategoryName, loginUserEmail]);
 
+                    await pgClient.end();
+
                     resolve(1);
                 }else{
+                    await pgClient.end();
+
                     reject({
                         statusCode : 404,
                         message : 'already exists'
@@ -64,6 +74,10 @@ const addRequestCategory = (requestCategoryName = '', loginUserEmail = '') => {
             }
         }
         catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+
             if(err.code == 23505){ //unique error
                 reject({
                     statusCode : 403,
@@ -99,6 +113,8 @@ const deleteRequestCategory = (requestCategoryName = '', loginUserAuthority) => 
             const deleteReqCategorySql = 'DELETE FROM shoot.request_category WHERE request_category_name = $1';
             const deleteReqCategoryResult = await pgClient.query(deleteReqCategorySql, [requestCategoryName]);
 
+            await pgClient.end();
+
             if(deleteReqCategoryResult.rowCount !== 0){ 
                 resolve(1);
             }else{
@@ -108,6 +124,10 @@ const deleteRequestCategory = (requestCategoryName = '', loginUserAuthority) => 
                 });
             }
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+
             reject({
                 statusCode : 409,
                 message : 'unexpected error occured'

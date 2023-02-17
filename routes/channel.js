@@ -5,6 +5,7 @@ const { getSubscribeState } = require('../module/subscribeControl');
 const router = require('express').Router();
 const verifyToken = require('../module/verifyToken');
 const logoutAuth = require('../middleware/logoutAuth');
+const channelDataValidCheck = require('../module/channelDataValidCheck');
 const loginAuth = require('../middleware/loginAuth');
 
 router.get('/all', async (req, res) => {
@@ -38,6 +39,8 @@ router.get('/:email', async (req, res) => {
     //from FE
     const email = req.params.email;
     const token = req.cookies.token;
+
+    console.log(verifyToken(token).email);
     
     //to FE
     const result = {};
@@ -98,13 +101,21 @@ router.put('/', loginAuth, channelImgUpload, async (req, res) => {
     const loginUserEmail = req.email || '';
     req.body.channelImg = req?.file?.key;
 
+    console.log(req.body);
+
     //to FE
     const result = {};
     let statusCode = 200;
 
     //main
     try{    
-        await modifyChannel(loginUserEmail, modifyData);
+        const { state, message } = channelDataValidCheck(req.body);
+        if(state){
+            await modifyChannel(loginUserEmail, modifyData);
+        }else{
+            statusCode = 400;
+            result.message = message;
+        }
     }catch(err){
         err.err ? console.log(err.err) : null;
 
@@ -116,9 +127,9 @@ router.put('/', loginAuth, channelImgUpload, async (req, res) => {
     res.status(statusCode).send(result);
 });
 
-router.put('/pw', loginAuth, async (req, res) => {
+router.put('/pw', async (req, res) => {
     //from FE
-    const loginUserEmail = req.email || '';
+    const loginUserEmail = req.body.email || '';
     
     //to FE
     const result = {};

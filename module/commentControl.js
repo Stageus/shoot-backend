@@ -15,7 +15,7 @@ const getCommentByScroll = (scrollId, loginUserEmail) => {
             await pgClient.connect();
 
             const searchCommentResult = await esClient.scroll({
-                scroll : '3m',
+                scroll : '1m',
                 scroll_id : scrollId,
                 ignore : 404
             });
@@ -69,11 +69,17 @@ const getCommentByScroll = (scrollId, loginUserEmail) => {
                 commentArray.push(selectCommentResult.rows[0]);
             }
 
+            await pgClient.end();
+
             resolve({
                 commentArray : commentArray, 
                 scrollId : searchCommentResult._scroll_id
-            })
+            });
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+
             reject({
                 statusCode : 409,
                 message : 'unexpected error occured',
@@ -169,11 +175,17 @@ const getAllComment = (postIdx, sortby = 'date', size = 20, loginUserEmail = '')
                 commentArray.push(selectCommentResult.rows[0]);
             }
 
+            await pgClient.end();
+
             resolve({
                 commentArray : commentArray,
                 scrollId : searchCommentResult._scroll_id
             });
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+
             reject({
                 statusCode : 409,
                 message : 'unexpected error occured',
@@ -226,6 +238,8 @@ const addComment = (contents = '', postIdx = '', loginUserEmail = '') => {
 
                 //COMMIT
                 await pgClient.query('COMMIT');
+
+                await pgClient.end();
                 
                 resolve(1);
             }else{
@@ -235,6 +249,10 @@ const addComment = (contents = '', postIdx = '', loginUserEmail = '') => {
                 });
             }
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+
             if(err.code == 23503){
                 reject({
                     statusCode : 404,
@@ -290,7 +308,13 @@ const modifyComment = (contents = '', commentIdx = -1, loginUserEmail = '', logi
                     message : 'cannot find comment'
                 });
             }
+
+            await pgClient.end();
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+
             reject({
                 statusCode : 409,
                 message : 'unexpected error occured',
@@ -332,7 +356,13 @@ const deleteComment = (commentIdx, loginUserEmail, loginUserAuthority = 0) => {
                     resolve(1);
                 }
             }
+            
+            await pgClient.end();
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+            
             reject({
                 statusCode : 409,
                 message : 'unexpected error occured',

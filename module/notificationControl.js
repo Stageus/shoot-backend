@@ -124,7 +124,14 @@ const addNotification = (notifyEmail, notiInfo) => {
 
                 resolve(1);
             }
+
+            await pgClient.end();
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.query('ROLLBACK');
+                await pgClient.end();
+            }
+
             console.log(err);
 
             resolve(1);
@@ -155,7 +162,7 @@ const addPostUploadNoti = (uploadChannelEmail, postIdx) => {
                     subscribeIdx = selectSubscribeResult.rows[selectSubscribeResult.rows.length - 1].subscribe_idx;
                 }
 
-                for(subscribeData of selectSubscribeResult.rows){
+                for(const subscribeData of selectSubscribeResult.rows){
                     esClient.index({
                         index : 'notification',
                         id : `${6}-${channelHash(subscribeData.subscriber_channel_email)}-${channelHash(uploadChannelEmail)}`,
@@ -171,8 +178,14 @@ const addPostUploadNoti = (uploadChannelEmail, postIdx) => {
                 }
             }
 
+            await pgClient.end();
+
             resolve(1);
         }catch(err){
+            if(pgClient._connected){
+                await pgClient.end();
+            }
+
             console.log(err);
         }
     });

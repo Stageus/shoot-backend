@@ -23,9 +23,14 @@ const addReplyCommentGood = (replyCommentIdx = -1, loginUserEmail = '') => {
             //COMMIT
             await pgClient.query('COMMIT');
 
+            await pgClient.end();
+
             resolve(1);
         }catch(err){
-            await pgClient.query('ROLLBACK');
+            if(pgClient._connected){
+                await pgClient.query('ROLLBACK');
+                await pgClient.end();
+            }
 
             if(err.code == 23505){
                 reject({
@@ -70,9 +75,13 @@ const deleteReplyCommentGood = (replyCommentIdx = -1, loginUserEmail = '') => {
                 //COMMIT
                 await pgClient.query('COMMIT');
 
+                await pgClient.end();
+
                 resolve(1);
             }else{
                 await pgClient.query('ROLLBACK');
+
+                await pgClient.end();
                 
                 reject({
                     statusCode : 403,
@@ -80,8 +89,11 @@ const deleteReplyCommentGood = (replyCommentIdx = -1, loginUserEmail = '') => {
                 });
             }
         }catch(err){
-            await pgClient.query('ROLLBACK');
-
+            if(pgClient._connected){
+                await pgClient.query('ROLLBACK');
+                await pgClient.end();
+            }
+            
             reject({
                 statusCode : 409,
                 message : 'unexpected error occured',
